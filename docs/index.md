@@ -501,10 +501,104 @@ x %= 5      // x = 1
 
 ### Member Access
 
+Stria provides static member access for struct properties using dot notation. This ensures type safety and enables compile-time validation, which aligns with Stria's design philosophy as a configuration description language.
+
 ```stria
-val config = MyStruct { name = 'test' }
-val name = config.name
+struct DatabaseConfig {
+    host: string
+    port: u16
+    username: string
+    password?: string
+}
+
+val config = DatabaseConfig {
+    host = 'localhost'
+    port = 5432
+    username = 'admin'
+    password = 'secret123'
+}
+
+// Static member access using dot notation
+val host = config.host        // string
+val port = config.port        // u16
+val username = config.username // string
+val password = config.password // string?
 ```
+
+#### Type Safety
+
+Member access is statically typed and validated at compile time:
+
+```stria
+// Valid - accessing existing properties
+val serverHost = config.host
+val serverPort = config.port
+
+// Invalid - compile-time error for non-existent properties
+// val invalid = config.nonExistentProperty  // Error: Property 'nonExistentProperty' does not exist
+```
+
+#### Optional Property Access
+
+When accessing optional properties, the result is an optional type:
+
+```stria
+val password = config.password   // Type: string?
+
+// Safe access with null checking
+if (config.password != null) {
+    val safePassword = config.password  // Type: string (narrowed from string?)
+}
+
+// Using null coalescing operator
+val passwordOrDefault = config.password ?: 'default_password'
+```
+
+#### Configuration Management Examples
+
+Member access is commonly used in configuration scenarios:
+
+```stria
+struct ServerConfig {
+    host: string
+    port: u16
+    ssl: bool
+    maxConnections?: u32
+}
+
+val server = ServerConfig {
+    host = 'api.example.com'
+    port = 443
+    ssl = true
+    maxConnections = 1000
+}
+
+// Accessing configuration values
+val endpoint = `${server.host}:${server.port}`
+val protocol = if (server.ssl) 'https' else 'http'
+val connectionLimit = server.maxConnections ?: 500
+
+// Building derived configuration
+val fullUrl = `${protocol}://${server.host}:${server.port}`
+```
+
+#### Design Rationale
+
+**Static Analysis Support**
+Member access uses static property names only, enabling:
+
+- **Compile-time validation**: All property access is verified at compile time
+- **Type safety**: Property types are known and enforced statically
+- **IDE support**: Autocomplete, refactoring, and error detection work reliably
+- **Static analysis**: Tools can analyze property usage without runtime execution
+
+**Configuration Language Alignment**
+This approach aligns with Stria's nature as a configuration description language:
+
+- **Predictable structure**: Configuration structure is known at compile time
+- **Schema validation**: Property access can be validated against schemas
+- **Serialization compatibility**: Static structure maps cleanly to JSON/YAML output
+- **Maintenance**: Configuration changes are trackable and refactorable
 
 ### Null Assertion
 
