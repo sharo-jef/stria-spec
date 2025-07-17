@@ -565,17 +565,17 @@ val lessThan10 = 1 until 10  // 1, 2, 3, 4, 5, 6, 7, 8, 9
 val countdown = 10 downTo 1  // 10, 9, 8, 7, 6, 5, 4, 3, 2, 1
 
 // Range membership testing
-val inRange = 10 in 1..10     // false (10 is included in 1..10)
+val inRange = 10 in 1..10     // false (10 is not included in 1..10)
 val inInclusiveRange = 10 in 1..=10 // true (10 is included in 1..=10)
 val notInRange = 15 in 1..10 // false
-val inSteppedRange = 6 in (2..20 step 2)  // true (6 is even)
-val notInSteppedRange = 7 in (2..20 step 2)  // false (7 is not even)
+val inSteppedRange = 6 in 2..20 step 2  // true (6 is even)
+val notInSteppedRange = 7 in 2..20 step 2  // false (7 is not even)
 
 // Float range membership testing with step
-val inFloatRange = 4.0 in (2.0..20.0 step 2.0)  // true (4.0 is in the sequence)
-val notInFloatRange = 3.0 in (2.0..20.0 step 2.0)  // false (3.0 is not in the sequence)
-val inFloatSteppedRange = 2.5 in (1.0..5.0 step 0.5)  // true (2.5 is in the sequence)
-val notInFloatSteppedRange = 2.3 in (1.0..5.0 step 0.5)  // false (2.3 is not in the sequence)
+val inFloatRange = 4.0 in 2.0..20.0 step 2.0  // true (4.0 is in the sequence)
+val notInFloatRange = 3.0 in 2.0..20.0 step 2.0  // false (3.0 is not in the sequence)
+val inFloatSteppedRange = 2.5 in 1.0..5.0 step 0.5  // true (2.5 is in the sequence)
+val notInFloatSteppedRange = 2.3 in 1.0..5.0 step 0.5  // false (2.3 is not in the sequence)
 ```
 
 ### Spread Operator
