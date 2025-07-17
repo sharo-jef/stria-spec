@@ -178,6 +178,49 @@ val doubleQuoted = "Hello, World!"
 val templateString = `Hello, ${name}!`
 ```
 
+##### Template Literals
+
+Template literals use backticks (`` ` ``) and support expression interpolation with `${expression}` syntax:
+
+```stria
+val name = "Alice"
+val age = 30
+val greeting = `Hello, ${name}! You are ${age} years old.`
+
+// Complex expressions
+val x = 10
+val y = 20
+val result = `The sum of ${x} and ${y} is ${x + y}`
+
+// Function calls
+val config = DatabaseConfig {
+    host = "localhost"
+    port = 5432
+}
+val connectionString = `Connected to ${config.host}:${config.port}`
+```
+
+##### Template Literal Type Conversion
+
+Values embedded in template literals are automatically converted to strings by implicitly calling their `toString()` getter:
+
+```stria
+val number = 42
+val boolean = true
+val struct = Point { x = 10, y = 20 }
+
+val message = `Number: ${number}, Boolean: ${boolean}, Struct: ${struct}`
+// Equivalent to:
+val message = `Number: ${number.toString()}, Boolean: ${boolean.toString()}, Struct: ${struct.toString()}`
+```
+
+**Type Conversion Rules:**
+
+- **Primitive types**: Use built-in string representations
+- **Struct types**: Call the `toString()` getter (implicit or user-defined)
+- **Optional types**: `null` values are converted to `"null"`
+- **Collections**: Use their default string representation or custom `toString()` implementation
+
 #### Numeric Literals
 
 Stria supports numeric literals with optional type suffixes:
@@ -1481,6 +1524,80 @@ struct Person {
     email?: string  // Optional field
 }
 ```
+
+### Implicit toString() Getter
+
+All structs automatically have an implicit `toString()` getter that provides a default string representation. This getter can be overridden by explicitly defining a custom `toString()` getter:
+
+```stria
+struct Point {
+    x: i32
+    y: i32
+}
+
+val point = Point { x = 10, y = 20 }
+val defaultString = point.toString()  // Uses implicit toString()
+
+// Custom toString() implementation
+struct Person {
+    name: string
+    age: u8
+
+    get toString(): string {
+        `${name} (${age} years old)`
+    }
+}
+
+val person = Person { name = "Alice", age = 30 }
+val customString = person.toString()  // "Alice (30 years old)"
+```
+
+#### Template Literal Integration
+
+The `toString()` getter is automatically invoked when structs are used in template literals:
+
+```stria
+struct ServerConfig {
+    host: string
+    port: u16
+
+    get toString(): string {
+        `${host}:${port}`
+    }
+}
+
+val config = ServerConfig { host = "localhost", port = 8080 }
+val message = `Server running on ${config}`  // "Server running on localhost:8080"
+```
+
+#### Default toString() Behavior
+
+When no custom `toString()` getter is defined, the implicit implementation provides a default representation:
+
+```stria
+struct DatabaseConfig {
+    host: string
+    port: u16
+    username: string
+}
+
+val config = DatabaseConfig {
+    host = "localhost"
+    port = 5432
+    username = "admin"
+}
+
+val defaultRepresentation = config.toString()
+// Default output format: "DatabaseConfig { host: localhost, port: 5432, username: admin }"
+```
+
+**Default toString() Features:**
+
+- **Struct name**: Includes the struct type name
+- **Property listing**: Shows all properties and their values
+- **Nested structs**: Recursively calls `toString()` on nested struct properties
+- **Optional properties**: Shows `null` for unset optional properties
+- **Consistent formatting**: Uses a predictable format for debugging and logging
 
 ### Member Name Constraints
 
