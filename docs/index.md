@@ -120,9 +120,12 @@ val templateString = `Hello, ${name}!`
 #### Numeric Literals
 
 ```stria
-val integer = 42
-val decimal = 3.14
-val negative = -123
+val integer = 42i32        // i32
+val byte = 255u8           // u8
+val long = 1000000i64      // i64
+val float = 3.14f32        // f32
+val double = 3.14159265359 // f64 (default for floating-point)
+val negative = -123i32     // i32
 ```
 
 #### Boolean Literals
@@ -149,8 +152,16 @@ val mixed = [1, 'two', true]
 #### Basic Types
 
 - `string`: Text data
-- `int`: Integer numbers
-- `float`: Floating-point numbers
+- `i8`: 8-bit signed integer (-128 to 127)
+- `i16`: 16-bit signed integer (-32,768 to 32,767)
+- `i32`: 32-bit signed integer (-2,147,483,648 to 2,147,483,647)
+- `i64`: 64-bit signed integer (-9,223,372,036,854,775,808 to 9,223,372,036,854,775,807)
+- `u8`: 8-bit unsigned integer (0 to 255)
+- `u16`: 16-bit unsigned integer (0 to 65,535)
+- `u32`: 32-bit unsigned integer (0 to 4,294,967,295)
+- `u64`: 64-bit unsigned integer (0 to 18,446,744,073,709,551,615)
+- `f32`: 32-bit IEEE 754 floating-point number
+- `f64`: 64-bit IEEE 754 floating-point number
 - `bool`: Boolean values (`true` or `false`)
 
 #### Collection Types
@@ -164,7 +175,7 @@ Optional types are denoted with `?`:
 
 ```stria
 val optionalString: string? = null
-val optionalNumber: int? = 42
+val optionalNumber: i32? = 42
 ```
 
 ### Type Inference
@@ -173,7 +184,8 @@ Stria supports type inference:
 
 ```stria
 val inferredString = 'Hello'  // string
-val inferredNumber = 42       // int
+val inferredNumber = 42       // i32
+val inferredFloat = 3.14      // f64
 val inferredBool = true       // bool
 ```
 
@@ -182,7 +194,7 @@ val inferredBool = true       // bool
 Union types allow multiple possible types:
 
 ```stria
-union StringOrNumber = string | int
+union StringOrNumber = string | i32
 val value: StringOrNumber = 'hello'
 ```
 
@@ -323,7 +335,7 @@ val multiParam = { x, y -> x + y }
 ### Anonymous Functions
 
 ```stria
-val anonymousFunction = fun(x: int): int {
+val anonymousFunction = fun(x: i32): i32 {
     x * 2
 }
 ```
@@ -337,7 +349,7 @@ val anonymousFunction = fun(x: int): int {
 ```stria
 struct Person {
     name: string
-    age: int
+    age: u8
     email?: string  // Optional field
 }
 ```
@@ -352,8 +364,8 @@ struct Point {
         x = 0
         y = 0
     }
-    x: int
-    y: int
+    x: i32
+    y: i32
 }
 ```
 
@@ -361,12 +373,12 @@ struct Point {
 
 ```stria
 struct Point {
-    init(x: int, y: int) {
+    init(x: i32, y: i32) {
         this.x = x
         this.y = y
     }
-    x: int
-    y: int
+    x: i32
+    y: i32
 }
 ```
 
@@ -375,8 +387,8 @@ struct Point {
 ```stria
 struct Point {
     init(this.x, this.y)
-    x: int
-    y: int
+    x: i32
+    y: i32
 }
 ```
 
@@ -390,7 +402,7 @@ struct Version {
         patch = 1
     }
 
-    init(major: int) {
+    init(major: u16) {
         this.major = major
         minor = 0
         patch = 0
@@ -398,9 +410,9 @@ struct Version {
 
     init(this.major, this.minor, this.patch)
 
-    major: int
-    minor: int
-    patch: int
+    major: u16
+    minor: u16
+    patch: u16
 }
 ```
 
@@ -449,7 +461,7 @@ struct MainStruct {
 ### Function Declaration
 
 ```stria
-fun add(a: int, b: int): int {
+fun add(a: i32, b: i32): i32 {
     a + b
 }
 ```
@@ -458,11 +470,11 @@ fun add(a: int, b: int): int {
 
 ```stria
 struct Calculator {
-    fun add(a: int, b: int): int {
+    fun add(a: i32, b: i32): i32 {
         a + b
     }
 
-    get currentValue(): int {
+    get currentValue(): i32 {
         // Getter method
         value
     }
@@ -472,7 +484,7 @@ struct Calculator {
         if (value < 0) error('Invalid value')
     }
 
-    value: int
+    value: i32
 }
 ```
 
@@ -494,14 +506,14 @@ struct Example {
 ### Lambda and Higher-Order Functions
 
 ```stria
-val transform: (int) -> int = { x -> x * 2 }
+val transform: (i32) -> i32 = { x -> x * 2 }
 val result = list.map(transform)
 ```
 
 ### Infix Functions
 
 ```stria
-infix fun Int.add(other: Int): Int = this + other
+infix fun i32.add(other: i32): i32 = this + other
 val result = 5 add 3  // 8
 ```
 
@@ -650,7 +662,7 @@ val last = list.last()
 ### Error Function
 
 ```stria
-fun validate(value: int) {
+fun validate(value: i32) {
     if (value < 0) error('Value must be non-negative')
 }
 ```
@@ -664,9 +676,9 @@ error[E001]: Type mismatch
   --> config.stria:5:10
    |
  5 |     port = "8080"
-   |            ^^^^^^ expected int, found string
+   |            ^^^^^^ expected u16, found string
    |
-help: convert string to int
+help: convert string to u16
    |
  5 |     port = 8080
    |            ^^^^
@@ -686,7 +698,7 @@ struct Config {
         }
     }
 
-    port: int
+    port: u16
 }
 ```
 
@@ -699,7 +711,7 @@ struct Config {
 #### Type Constraints
 
 ```stria
-type Port = int(min: 1, max: 65535)
+type Port = u16(min: 1, max: 65535)
 type Email = string(format: 'email')
 type Password = string(minLength: 8, maxLength: 64)
 ```
@@ -708,8 +720,8 @@ type Password = string(minLength: 8, maxLength: 64)
 
 ```stria
 val result = match value {
-    is String -> "String value"
-    is Int -> "Integer value"
+    is string -> "String value"
+    is i32 -> "Integer value"
     else -> "Other type"
 }
 ```
