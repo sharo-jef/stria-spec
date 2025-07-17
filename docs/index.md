@@ -105,6 +105,7 @@ struct    init      fun       val       var
 if        else      true      false     null
 this      get       repeated  private   use
 schema    mixin     error     match     when
+as
 ```
 
 ### Literals
@@ -119,14 +120,28 @@ val templateString = `Hello, ${name}!`
 
 #### Numeric Literals
 
+Stria supports numeric literals with optional type suffixes:
+
 ```stria
+// Type suffix notation
 val integer = 42i32        // i32
 val byte = 255u8           // u8
 val long = 1000000i64      // i64
 val float = 3.14f32        // f32
-val double = 3.14159265359 // f64 (default for floating-point)
+val double = 3.14159265359f64 // f64
 val negative = -123i32     // i32
+
+// Default types (without suffix)
+val defaultInt = 42        // i32 (default for integers)
+val defaultFloat = 3.14    // f64 (default for floating-point)
+val defaultNegative = -123 // i32
 ```
+
+##### Supported Type Suffixes
+
+- **Integer types**: `i8`, `i16`, `i32`, `i64`, `u8`, `u16`, `u32`, `u64`
+- **Floating-point types**: `f32`, `f64`
+- **Default types**: `i32` for integers, `f64` for floating-point numbers
 
 #### Boolean Literals
 
@@ -180,14 +195,25 @@ val optionalNumber: i32? = 42
 
 ### Type Inference
 
-Stria supports type inference:
+Stria supports type inference with the following default types:
 
 ```stria
 val inferredString = 'Hello'  // string
-val inferredNumber = 42       // i32
-val inferredFloat = 3.14      // f64
+val inferredInt = 42          // i32 (default for integers)
+val inferredFloat = 3.14      // f64 (default for floating-point)
 val inferredBool = true       // bool
+
+// Explicit type annotation
+val explicitInt: i64 = 42     // i64
+val explicitFloat: f32 = 3.14 // f32
 ```
+
+#### Default Type Rules
+
+- **Integer literals**: Default to `i32` when no type suffix is provided
+- **Floating-point literals**: Default to `f64` when no type suffix is provided
+- **Type suffixes**: Override default types (e.g., `42i64`, `3.14f32`)
+- **Type annotations**: Override both defaults and suffixes
 
 ### Union Types
 
@@ -290,6 +316,38 @@ val result = value
     |> transform1
     |> transform2
     |> finalTransform
+```
+
+### Type Cast Operators
+
+Stria supports explicit type casting using the `as` keyword:
+
+```stria
+val intValue = 42i32
+val floatValue = intValue as f64    // 42.0
+val stringValue = intValue as string // "42"
+val boolValue = intValue as bool     // true (non-zero values are true)
+
+val floatToInt = 3.14f64 as i32     // 3 (truncated)
+val stringToInt = "123" as i32      // 123
+val boolToInt = true as i32         // 1
+```
+
+#### Supported Cast Operations
+
+- **Numeric casts**: Between integer and floating-point types
+- **String casts**: From any type to string representation
+- **Boolean casts**: From numeric types (0 is false, non-zero is true)
+- **Parsing casts**: From string to numeric or boolean types
+
+#### Cast Safety
+
+Type casts may truncate or lose precision:
+
+```stria
+val largeInt = 1000i32
+val smallInt = largeInt as u8       // 232 (wraps around)
+val floatPrecision = 3.14159f64 as f32  // May lose precision
 ```
 
 ### Array Operations
