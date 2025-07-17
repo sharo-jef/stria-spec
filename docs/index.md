@@ -3236,8 +3236,8 @@ interface Location {
 }
 
 interface Position {
-  line: number; // 1-based line number
-  column: number; // 0-based column number (LSP compatible)
+  line: u32; // 1-based line number
+  column: u32; // 0-based column number (LSP compatible)
 }
 ```
 
@@ -3452,13 +3452,13 @@ interface StringLiteral extends BaseNode {
 
 interface IntegerLiteral extends BaseNode {
   type: "IntegerLiteral";
-  value: number;
+  value: i64;
   raw: string;
 }
 
 interface FloatLiteral extends BaseNode {
   type: "FloatLiteral";
-  value: number;
+  value: f64;
   raw: string;
 }
 
@@ -3526,7 +3526,7 @@ interface PrimitiveType extends BaseNode {
 interface ArrayType extends BaseNode {
   type: "ArrayType";
   elementType: TypeExpression;
-  dimensions: number;
+  dimensions: u32;
 }
 
 interface OptionalType extends BaseNode {
