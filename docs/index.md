@@ -301,6 +301,124 @@ val range = 1..10           // Range from 1 to 10
 val rangeWithStep = 1..10 step 2  // 1, 3, 5, 7, 9
 ```
 
+#### Range Types
+
+Range expressions are interpreted as `RangeExpression` at compile time and handled as `IntRange` or `FloatRange` at runtime:
+
+```stria
+struct IntRange {
+    from: i32
+    to: i32
+    step: i32 = 1
+}
+
+struct FloatRange {
+    from: f64
+    to: f64
+    step: f64 = 1.0
+}
+```
+
+#### Range Methods
+
+Range types support the following infix functions:
+
+```stria
+// Step function for IntRange
+infix fun IntRange.step(step: i32): IntRange {
+    val {from, to} = this
+    IntRange {
+        this.from = from
+        this.to = to
+        this.step = if (step == 0) {
+            error('step must not be zero')
+        } else if ((step < 0 && from < to) || (step > 0 && from > to)) {
+            -step
+        } else {
+            step
+        }
+    }
+}
+
+// Until function for integers (exclusive upper bound)
+infix fun i32.until(to: i32): IntRange {
+    if (to == this) error('to must not be equal to from')
+    if (to < this) error('to must be greater than from')
+    IntRange {
+        from = this
+        this.to = to - 1
+        step = 1
+    }
+}
+
+// Down to function for integers (descending range)
+infix fun i32.downTo(to: i32): IntRange {
+    if (to == this) error('to must not be equal to from')
+    if (to > this) error('to must be less than from')
+    IntRange {
+        from = this
+        this.to = to
+        step = -1
+    }
+}
+
+// Step function for FloatRange
+infix fun FloatRange.step(step: f64): FloatRange {
+    val {from, to} = this
+    FloatRange {
+        this.from = from
+        this.to = to
+        this.step = if (step == 0) {
+            error('step must not be zero')
+        } else if ((step < 0 && from < to) || (step > 0 && from > to)) {
+            -step
+        } else {
+            step
+        }
+    }
+}
+
+// Until function for floats (exclusive upper bound)
+infix fun f64.until(to: f64): FloatRange {
+    if (to == this) error('to must not be equal to from')
+    if (to < this) error('to must be greater than from')
+    FloatRange {
+        from = this
+        this.to = to - 1.0
+        step = 1.0
+    }
+}
+
+// Down to function for floats (descending range)
+infix fun f64.downTo(to: f64): FloatRange {
+    if (to == this) error('to must not be equal to from')
+    if (to > this) error('to must be less than from')
+    FloatRange {
+        from = this
+        this.to = to
+        step = -1.0
+    }
+}
+```
+
+#### Range Usage Examples
+
+```stria
+// Basic ranges
+val numbers = 1..10          // IntRange from 1 to 10
+val floats = 1.0..10.0       // FloatRange from 1.0 to 10.0
+
+// Range with step
+val evens = 2..20 step 2     // 2, 4, 6, 8, 10, 12, 14, 16, 18, 20
+val halves = 0.5..5.0 step 0.5  // 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0
+
+// Until ranges (exclusive upper bound)
+val lessThan10 = 1 until 10  // 1, 2, 3, 4, 5, 6, 7, 8, 9
+
+// Descending ranges
+val countdown = 10 downTo 1  // 10, 9, 8, 7, 6, 5, 4, 3, 2, 1
+```
+
 ### Spread Operator
 
 ```stria
@@ -1199,36 +1317,439 @@ Both schema files and configuration files use the `.stria` extension, but they s
 
 ### Import System
 
+The `use` statement is used to import standard library functions that are not built-in but are provided as standard functionality. These functions require explicit import before use.
+
 ```stria
 use getEnv
-use readFile
-use writeFile
+use random
+use print
 ```
 
-### Built-in Functions
+#### Import Syntax
+
+Functions are imported by specifying their exact name:
+
+```stria
+use functionName
+```
+
+Multiple functions can be imported with separate `use` statements:
+
+```stria
+use getEnv
+use random
+use print
+```
+
+### Standard Library Functions
+
+The following functions are available through the `use` statement:
 
 #### Environment Functions
 
 ```stria
 use getEnv
+
+fun getEnv(key: string): string? {
+    // Returns environment variable value or null if not found
+}
+
+// Usage example:
 val path = getEnv('PATH')!
-```
-
-#### File Functions
-
-```stria
-use readFile
-val content = readFile('config.txt')
+val home = getEnv('HOME') ?: '/default/home'
 ```
 
 #### Utility Functions
+
+```stria
+use random
+
+fun random(): f64 {
+    // Returns random f64 value between 0.0 and 1.0
+}
+
+// Usage example:
+val randomValue = random()
+val randomInt = (random() * 100) as i32
+```
+
+#### Output Functions
+
+```stria
+use print
+
+fun print(message: any) {
+    // Prints message to standard output
+    // Note: 'any' type does not exist in Stria's type system
+    // This function exceptionally accepts any type through special compiler handling
+}
+
+// Usage example:
+print('Hello, World!')
+print(42)
+print(myStruct)
+```
+
+### Built-in Functions
+
+The following functions are implicitly defined and available without import:
+
+#### Error Functions
+
+```stria
+fun error(message: string): void {
+    // Terminates execution with the given error message
+}
+```
+
+#### Math Functions
+
+Math-related functions and constants are available globally:
+
+##### Math Constants
+
+```stria
+// Math constants
+val pi: f64 = 3.141592653589793
+val pi_f32: f32 = 3.141592653589793f32
+```
+
+##### Functions Available for All Numeric Types
+
+The following functions are available as static methods on all numeric types (`i8`, `i16`, `i32`, `i64`, `u8`, `u16`, `u32`, `u64`, `f32`, `f64`):
+
+```stria
+// Comparison functions (available for all numeric types)
+fun i32.max(a: i32, b: i32): i32 {
+    if (a > b) a else b
+}
+
+fun i32.min(a: i32, b: i32): i32 {
+    if (a < b) a else b
+}
+
+fun i32.abs(value: i32): i32 {
+    if (value < 0) -value else value
+}
+
+// Similar functions exist for all other numeric types:
+// i8.max, i8.min, i8.abs
+// i16.max, i16.min, i16.abs
+// i64.max, i64.min, i64.abs
+// u8.max, u8.min, u8.abs
+// u16.max, u16.min, u16.abs
+// u32.max, u32.min, u32.abs
+// u64.max, u64.min, u64.abs
+// f32.max, f32.min, f32.abs
+// f64.max, f64.min, f64.abs
+
+// Usage examples:
+val maxInt = i32.max(10, 20)          // 20
+val minFloat = f64.min(3.14, 2.71)    // 2.71
+val absValue = i16.abs(-42)           // 42
+```
+
+##### Power Functions
+
+Power functions are available for numeric types:
+
+```stria
+// Integer power functions
+fun i32.pow(base: i32, exponent: i32): i32 {
+    base ** exponent
+}
+
+// Floating-point power functions
+fun f64.pow(base: f64, exponent: f64): f64 {
+    base ** exponent
+}
+
+// Similar functions exist for all other numeric types
+
+// Usage examples:
+val intPower = i32.pow(2, 3)          // 8
+val floatPower = f64.pow(2.0, 3.0)    // 8.0
+val mixedPower = f64.pow(2.0, 3.0)    // 8.0
+```
+
+##### Floating-Point Only Functions
+
+The following functions are only available for floating-point types (`f32`, `f64`):
+
+```stria
+// Square root function
+fun f64.sqrt(value: f64): f64 {
+    if (value < 0) error("Cannot compute square root of negative number")
+    value ** 0.5
+}
+
+fun f32.sqrt(value: f32): f32 {
+    if (value < 0) error("Cannot compute square root of negative number")
+    value ** 0.5
+}
+
+// Rounding functions (floating-point input, integer output)
+fun f64.round(value: f64): i32 {
+    if (value >= 0) (value + 0.5) as i32 else (value - 0.5) as i32
+}
+
+fun f64.floor(value: f64): i32 {
+    if (value >= 0) value as i32 else (value as i32) - 1
+}
+
+fun f64.ceil(value: f64): i32 {
+    if (value >= 0) (value as i32) + 1 else value as i32
+}
+
+fun f32.round(value: f32): i32 {
+    if (value >= 0) (value + 0.5) as i32 else (value - 0.5) as i32
+}
+
+fun f32.floor(value: f32): i32 {
+    if (value >= 0) value as i32 else (value as i32) - 1
+}
+
+fun f32.ceil(value: f32): i32 {
+    if (value >= 0) (value as i32) + 1 else value as i32
+}
+
+// Angle conversion functions
+fun f64.deg(radians: f64): f64 {
+    radians * (180.0 / pi)
+}
+
+fun f64.rad(degrees: f64): f64 {
+    degrees * (pi / 180.0)
+}
+
+fun f32.deg(radians: f32): f32 {
+    radians * (180.0f32 / pi_f32)
+}
+
+fun f32.rad(degrees: f32): f32 {
+    degrees * (pi_f32 / 180.0f32)
+}
+
+// Trigonometric functions
+fun f64.sin(angle: f64): f64 {
+    // Implementation provided by runtime
+}
+
+fun f64.cos(angle: f64): f64 {
+    // Implementation provided by runtime
+}
+
+fun f64.tan(angle: f64): f64 {
+    // Implementation provided by runtime
+}
+
+fun f64.asin(value: f64): f64 {
+    // Implementation provided by runtime
+}
+
+fun f64.acos(value: f64): f64 {
+    // Implementation provided by runtime
+}
+
+fun f64.atan(value: f64): f64 {
+    // Implementation provided by runtime
+}
+
+fun f64.atan2(y: f64, x: f64): f64 {
+    // Implementation provided by runtime
+}
+
+// f32 versions of trigonometric functions
+fun f32.sin(angle: f32): f32 {
+    // Implementation provided by runtime
+}
+
+fun f32.cos(angle: f32): f32 {
+    // Implementation provided by runtime
+}
+
+fun f32.tan(angle: f32): f32 {
+    // Implementation provided by runtime
+}
+
+fun f32.asin(value: f32): f32 {
+    // Implementation provided by runtime
+}
+
+fun f32.acos(value: f32): f32 {
+    // Implementation provided by runtime
+}
+
+fun f32.atan(value: f32): f32 {
+    // Implementation provided by runtime
+}
+
+fun f32.atan2(y: f32, x: f32): f32 {
+    // Implementation provided by runtime
+}
+
+// Hyperbolic functions
+fun f64.sinh(value: f64): f64 {
+    (f64.exp(value) - f64.exp(-value)) / 2
+}
+
+fun f64.cosh(value: f64): f64 {
+    (f64.exp(value) + f64.exp(-value)) / 2
+}
+
+fun f64.tanh(value: f64): f64 {
+    f64.sinh(value) / f64.cosh(value)
+}
+
+fun f32.sinh(value: f32): f32 {
+    (f32.exp(value) - f32.exp(-value)) / 2
+}
+
+fun f32.cosh(value: f32): f32 {
+    (f32.exp(value) + f32.exp(-value)) / 2
+}
+
+fun f32.tanh(value: f32): f32 {
+    f32.sinh(value) / f32.cosh(value)
+}
+
+// Exponential and logarithmic functions
+fun f64.exp(value: f64): f64 {
+    // Implementation provided by runtime
+}
+
+fun f64.log(value: f64): f64 {
+    if (value <= 0) error("Cannot compute logarithm of non-positive number")
+    // Implementation provided by runtime
+}
+
+fun f64.log10(value: f64): f64 {
+    if (value <= 0) error("Cannot compute logarithm base 10 of non-positive number")
+    // Implementation provided by runtime
+}
+
+fun f32.exp(value: f32): f32 {
+    // Implementation provided by runtime
+}
+
+fun f32.log(value: f32): f32 {
+    if (value <= 0) error("Cannot compute logarithm of non-positive number")
+    // Implementation provided by runtime
+}
+
+fun f32.log10(value: f32): f32 {
+    if (value <= 0) error("Cannot compute logarithm base 10 of non-positive number")
+    // Implementation provided by runtime
+}
+
+// Floating-point manipulation functions
+fun f64.ldexp(value: f64, exponent: i32): f64 {
+    value * (2 ** exponent)
+}
+
+fun f64.frexp(value: f64): (f64, i32) {
+    if (value == 0.0) (0.0, 0)
+    else {
+        val exponent = f64.floor(f64.log(f64.abs(value)) / f64.log(2.0))
+        val mantissa = value / (2 ** exponent)
+        (mantissa, exponent)
+    }
+}
+
+fun f64.modf(value: f64): (f64, f64) {
+    val integerPart = if (value >= 0) f64.floor(value) as f64 else f64.ceil(value) as f64
+    val fractionalPart = value - integerPart
+    (fractionalPart, integerPart)
+}
+
+fun f64.fmod(x: f64, y: f64): f64 {
+    if (y == 0) error("Division by zero")
+    x - y * f64.floor(x / y)
+}
+
+fun f32.ldexp(value: f32, exponent: i32): f32 {
+    value * (2 ** exponent)
+}
+
+fun f32.frexp(value: f32): (f32, i32) {
+    if (value == 0.0f32) (0.0f32, 0)
+    else {
+        val exponent = f32.floor(f32.log(f32.abs(value)) / f32.log(2.0f32))
+        val mantissa = value / (2 ** exponent)
+        (mantissa, exponent)
+    }
+}
+
+fun f32.modf(value: f32): (f32, f32) {
+    val integerPart = if (value >= 0) f32.floor(value) as f32 else f32.ceil(value) as f32
+    val fractionalPart = value - integerPart
+    (fractionalPart, integerPart)
+}
+
+fun f32.fmod(x: f32, y: f32): f32 {
+    if (y == 0) error("Division by zero")
+    x - y * f32.floor(x / y)
+}
+```
+
+##### Usage Examples
+
+```stria
+// Functions available for all numeric types
+val maxInt = i32.max(10, 20)          // 20
+val minFloat = f32.min(3.14f32, 2.71f32) // 2.71f32
+val absNegative = i64.abs(-42)        // 42i64
+
+// Floating-point only functions
+val squareRoot = f64.sqrt(16.0)       // 4.0
+val roundedValue = f64.round(3.14)    // 3i32
+val sine = f64.sin(pi / 2)            // 1.0
+val logarithm = f64.log(10.0)         // 2.302585092994046
+
+// Type-specific usage
+val intMax = i16.max(100, 200)        // 200i16
+val floatMax = f32.max(1.5f32, 2.5f32) // 2.5f32
+val angle = f64.deg(pi / 4)           // 45.0
+val f32Sine = f32.sin(pi_f32 / 2)     // 1.0f32
+```
+
+#### Type Conversion Functions
+
+```stria
+// Type conversion functions (cast operations)
+fun i32(value: any): i32 {
+    // Converts value to i32 type
+}
+
+fun f64(value: any): f64 {
+    // Converts value to f64 type
+}
+
+fun string(value: any): string {
+    // Converts value to string type
+}
+
+fun bool(value: any): bool {
+    // Converts value to bool type
+}
+```
+
+### Built-in Methods
+
+The following methods are available on primitive types without import:
+
+#### String Methods
 
 ```stria
 // String functions
 val upper = str.toUpperCase()
 val lower = str.toLowerCase()
 val length = str.length()
+```
 
+#### List Methods
+
+```stria
 // List functions
 val size = list.size()
 val first = list.first()
@@ -1241,11 +1762,46 @@ val last = list.last()
 
 ### Error Function
 
+Stria does not have explicit `throw` statements. Instead, the `error()` function is used to terminate execution and report errors. When `error()` is called, it immediately interrupts processing similar to a `throw` statement in other languages.
+
+```stria
+fun error(message: string): void {
+    // Terminates execution with the given error message
+    // This function never returns - it always throws an error
+}
+```
+
+#### Error Function Usage
+
+The `error()` function accepts a message parameter that will be displayed in the error output:
+
 ```stria
 fun validate(value: i32) {
     if (value < 0) error('Value must be non-negative')
+    if (value > 1000) error('Value must not exceed 1000')
+}
+
+fun validatePort(port: u16) {
+    if (port < 1 || port > 65535) {
+        error('Port must be between 1 and 65535')
+    }
 }
 ```
+
+#### Error Display Format
+
+When `error()` is called, the error message displays carets (`^`) under the entire `error()` call:
+
+```
+error[E001]: Value must be non-negative
+  --> config.stria:3:9
+   |
+ 3 |     if (value < 0) error('Value must be non-negative')
+   |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ execution terminated here
+   |
+```
+
+The caret underline (`^^^^^^^`) spans the entire `error()` function call, indicating where execution was terminated.
 
 ### Error Messages
 
