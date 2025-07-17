@@ -12,13 +12,14 @@ Date: none
 4. [Types and Values](#types-and-values)
 5. [Expressions and Operators](#expressions-and-operators)
 6. [Statements and Control Flow](#statements-and-control-flow)
-7. [Structs and Initialization](#structs-and-initialization)
-8. [Functions and Methods](#functions-and-methods)
-9. [Annotations](#annotations)
-10. [Schema System](#schema-system)
-11. [Standard Library](#standard-library)
-12. [Error Handling](#error-handling)
-13. [Future Features](#future-features)
+7. [Scope and Lifetime](#scope-and-lifetime)
+8. [Structs and Initialization](#structs-and-initialization)
+9. [Functions and Methods](#functions-and-methods)
+10. [Annotations](#annotations)
+11. [Schema System](#schema-system)
+12. [Standard Library](#standard-library)
+13. [Error Handling](#error-handling)
+14. [Future Features](#future-features)
 
 ---
 
@@ -1016,6 +1017,448 @@ Range patterns in match expressions are evaluated using the `in` operator intern
 ```stria
 val anonymousFunction = fun(x: i32): i32 {
     x * 2
+}
+```
+
+---
+
+## Scope and Lifetime
+
+### Scope Rules
+
+Stria follows lexical scoping rules similar to modern programming languages, with specific considerations for configuration management use cases.
+
+#### Global Scope
+
+Variables and functions declared at the file level have global scope within that file:
+
+```stria
+// Global variables
+val globalConfig = "production"
+var globalCounter = 0
+
+// Global function
+fun getEnvironment(): string {
+    globalConfig
+}
+
+// Available throughout the file
+struct Config {
+    init {
+        environment = getEnvironment()
+        counter = globalCounter
+    }
+    environment: string
+    counter: i32
+}
+```
+
+#### Block Scope
+
+Variables declared within blocks (enclosed by `{}`) have block scope:
+
+```stria
+val outerValue = 10
+
+if (condition) {
+    val innerValue = 20        // Block-scoped variable
+    var mutableInner = 30      // Block-scoped mutable variable
+
+    // Both outerValue and innerValue are accessible here
+    val sum = outerValue + innerValue  // 30
+}
+
+// innerValue is not accessible here
+// val invalid = innerValue  // Error: 'innerValue' is not in scope
+```
+
+#### Function Scope
+
+Function parameters and local variables have function scope:
+
+```stria
+fun calculateSum(a: i32, b: i32): i32 {
+    val localMultiplier = 2           // Function-scoped variable
+    val intermediate = a * localMultiplier
+
+    if (b > 0) {
+        val blockLocal = intermediate + b  // Block-scoped within if
+        blockLocal
+    } else {
+        intermediate
+    }
+}
+
+// localMultiplier is not accessible here
+// val invalid = localMultiplier  // Error: 'localMultiplier' is not in scope
+```
+
+#### Struct Scope
+
+Struct members have struct scope and are accessible within method bodies:
+
+```stria
+struct Calculator {
+    init {
+        result = 0
+    }
+
+    fun add(value: i32) {
+        // Both 'result' and 'value' are accessible here
+        result += value
+    }
+
+    fun multiply(value: i32) {
+        // 'result' is accessible, but 'value' from add() is not
+        result *= value
+    }
+
+    result: i32
+}
+```
+
+#### Lambda Scope
+
+Lambda expressions have their own scope and can capture variables from enclosing scopes:
+
+```stria
+val multiplier = 3
+
+val numbers = [1, 2, 3, 4, 5]
+val transformed = numbers.map { value ->
+    val localFactor = 2                    // Lambda-scoped variable
+    (value * multiplier) + localFactor     // Captures 'multiplier' from outer scope
+}
+
+// localFactor is not accessible here
+// val invalid = localFactor  // Error: 'localFactor' is not in scope
+```
+
+### Variable Shadowing
+
+Stria allows variable shadowing, where inner scopes can declare variables with the same name as outer scopes:
+
+#### Basic Shadowing
+
+```stria
+val name = "global"
+
+fun processName(): string {
+    val name = "function"     // Shadows global 'name'
+
+    if (true) {
+        val name = "block"    // Shadows function 'name'
+        name                  // Returns "block"
+    }
+
+    name                      // Returns "function"
+}
+
+val result = processName()    // "function"
+val global = name            // "global"
+```
+
+#### Shadowing in Struct Context
+
+```stria
+val defaultPort = 8080
+
+struct ServerConfig {
+    init(port: u16) {
+        val defaultPort = 3000        // Shadows global 'defaultPort'
+        this.port = port ?: defaultPort  // Uses local 'defaultPort' (3000)
+    }
+
+    port: u16
+}
+
+val config = ServerConfig(null)  // config.port = 3000
+val global = defaultPort         // 8080
+```
+
+#### Shadowing Rules
+
+1. **Inner scope variables shadow outer scope variables** with the same name
+2. **Shadowing is allowed across different scope levels** (global → function → block)
+3. **No shadowing within the same scope level** - redeclaration in the same scope is an error
+4. **Shadowed variables are temporarily hidden** but not destroyed
+5. **Original variables become accessible again** when the shadowing scope ends
+
+#### Shadowing Restrictions
+
+```stria
+fun example() {
+    val x = 10
+    // val x = 20  // Error: Cannot redeclare 'x' in the same scope
+
+    if (true) {
+        val x = 30  // OK: Shadows the outer 'x'
+        val y = 40
+        // val y = 50  // Error: Cannot redeclare 'y' in the same scope
+    }
+}
+```
+
+### Variable Lifetime
+
+#### Immutable Variables (`val`)
+
+Immutable variables exist from declaration until the end of their scope:
+
+```stria
+fun example() {
+    val immutable = "value"  // Lifetime starts here
+
+    if (condition) {
+        val blockScoped = immutable + "!"  // Lifetime starts here
+        // blockScoped lifetime ends here
+    }
+
+    // immutable is still accessible
+    val result = immutable
+    // immutable lifetime ends here
+}
+```
+
+#### Mutable Variables (`var`)
+
+Mutable variables follow the same lifetime rules as immutable variables:
+
+```stria
+fun counter() {
+    var count = 0        // Lifetime starts here
+
+    for (i in 1..10) {
+        var temp = i * 2  // Lifetime starts here (each iteration)
+        count += temp
+        // temp lifetime ends here (each iteration)
+    }
+
+    count               // count is still accessible
+    // count lifetime ends here
+}
+```
+
+#### Captured Variables in Lambdas
+
+Variables captured by lambdas extend their lifetime:
+
+```stria
+fun createMultiplier(factor: i32): (i32) -> i32 {
+    val multiplier = factor  // Lifetime extended by lambda capture
+
+    { value ->
+        value * multiplier   // 'multiplier' is captured and kept alive
+    }
+    // multiplier's lifetime is extended beyond this point
+}
+
+val doubler = createMultiplier(2)
+val result = doubler(5)  // multiplier is still accessible here
+```
+
+### Struct Member Lifetime
+
+#### Property Lifetime
+
+Struct properties exist from struct instantiation until the struct instance is no longer referenced:
+
+```stria
+struct Config {
+    init {
+        timeout = 30      // Property lifetime starts here
+    }
+
+    timeout: i32
+}
+
+val config = Config()     // config.timeout lifetime starts
+// config.timeout lifetime continues until config is no longer referenced
+```
+
+#### Method Lifetime
+
+Methods exist for the lifetime of the struct instance:
+
+```stria
+struct Calculator {
+    fun add(value: i32) {
+        result += value   // Method can access properties throughout struct lifetime
+    }
+
+    result: i32
+}
+
+val calc = Calculator()   // calc.add() becomes available
+calc.add(10)             // Method is accessible
+// calc.add() lifetime ends when calc is no longer referenced
+```
+
+### Configuration-Specific Lifetime Considerations
+
+#### Build-Time vs Runtime Lifetime
+
+As a configuration description language, Stria has distinct lifetime phases:
+
+```stria
+// Schema definition phase
+struct DatabaseConfig {
+    init {
+        // Build-time initialization
+        connectionString = buildConnectionString()
+    }
+
+    fun buildConnectionString(): string {
+        // This method executes during build-time
+        `${host}:${port}/${database}`
+    }
+
+    host: string
+    port: u16
+    database: string
+    connectionString: string
+}
+
+// Configuration instantiation phase
+val config = DatabaseConfig {
+    host = "localhost"
+    port = 5432
+    database = "myapp"
+}
+
+// Runtime phase (after compilation)
+// The compiled JSON contains the final values:
+// {
+//   "host": "localhost",
+//   "port": 5432,
+//   "database": "myapp",
+//   "connectionString": "localhost:5432/myapp"
+// }
+```
+
+#### Immutable Runtime Values
+
+After compilation, all configuration values become immutable:
+
+```stria
+// During build-time, these are mutable for construction
+var servers = List<string>()
+servers.push("web1.example.com")
+servers.push("web2.example.com")
+
+// After compilation, the resulting JSON is immutable:
+// {
+//   "servers": ["web1.example.com", "web2.example.com"]
+// }
+```
+
+### Scope Resolution Order
+
+When resolving variable names, Stria follows this precedence order:
+
+1. **Current block scope** - Variables declared in the current block
+2. **Enclosing block scopes** - Variables from outer blocks (innermost to outermost)
+3. **Function scope** - Function parameters and local variables
+4. **Struct scope** - Struct properties and methods (when inside a struct)
+5. **File scope** - Global variables and functions
+6. **Import scope** - Imported functions and types
+
+#### Example of Scope Resolution
+
+```stria
+val global = "global"
+
+fun example() {
+    val function = "function"
+
+    if (true) {
+        val block = "block"
+
+        // Resolution order for variable lookup:
+        // 1. block scope: 'block' -> "block"
+        // 2. function scope: 'function' -> "function"
+        // 3. global scope: 'global' -> "global"
+
+        val values = [block, function, global]  // ["block", "function", "global"]
+    }
+}
+```
+
+### Best Practices for Scope Management
+
+#### Minimize Scope Pollution
+
+```stria
+// Good: Limit variable scope to where it's needed
+fun processConfig() {
+    val config = loadConfig()
+
+    if (config.isValid()) {
+        val processedData = processData(config)  // Limited to this block
+        return processedData
+    }
+
+    return null
+}
+
+// Avoid: Unnecessarily wide scope
+fun processConfigBad() {
+    val config = loadConfig()
+    val processedData = null  // Declared too early
+
+    if (config.isValid()) {
+        processedData = processData(config)
+    }
+
+    return processedData
+}
+```
+
+#### Use Descriptive Names to Avoid Shadowing Confusion
+
+```stria
+// Good: Clear naming prevents confusion
+val globalTimeout = 30
+
+struct ServerConfig {
+    init(requestTimeout: u32) {
+        this.timeout = requestTimeout ?: globalTimeout
+    }
+
+    timeout: u32
+}
+
+// Avoid: Confusing shadowing
+val timeout = 30
+
+struct ServerConfig {
+    init(timeout: u32) {           // Shadows global 'timeout'
+        this.timeout = timeout ?: timeout  // Confusing!
+    }
+
+    timeout: u32
+}
+```
+
+#### Prefer `val` Over `var` for Immutability
+
+```stria
+// Good: Immutable by default
+fun calculateTotal(items: List<Item>): f64 {
+    val subtotal = items.map { it.price }.sum()
+    val tax = subtotal * 0.08
+    val total = subtotal + tax
+
+    total
+}
+
+// Avoid: Unnecessary mutability
+fun calculateTotalBad(items: List<Item>): f64 {
+    var subtotal = items.map { it.price }.sum()
+    var tax = subtotal * 0.08
+    var total = subtotal + tax
+
+    total
 }
 ```
 
