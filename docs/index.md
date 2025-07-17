@@ -2529,6 +2529,7 @@ The `use` statement is used to import standard library functions that are not bu
 use getEnv
 use random
 use print
+use println
 ```
 
 #### Import Syntax
@@ -2545,6 +2546,7 @@ Multiple functions can be imported with separate `use` statements:
 use getEnv
 use random
 use print
+use println
 ```
 
 ### Standard Library Functions
@@ -2590,10 +2592,21 @@ fun print(message: any) {
     // This function exceptionally accepts any type through special compiler handling
 }
 
-// Usage example:
-print('Hello, World!')
-print(42)
-print(myStruct)
+use println
+
+fun println(message: any) {
+    // Prints message to standard output followed by a newline
+    // Note: 'any' type does not exist in Stria's type system
+    // This function exceptionally accepts any type through special compiler handling
+}
+
+// Usage examples:
+print('Hello, ')
+print('World!')      // Output: Hello, World!
+
+println('Hello, World!')  // Output: Hello, World!\n
+println(42)               // Output: 42\n
+println(myStruct)         // Output: [struct representation]\n
 ```
 
 ### Built-in Functions
