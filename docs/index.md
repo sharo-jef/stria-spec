@@ -153,9 +153,10 @@ val isFalse = false
 #### List Literals
 
 ```stria
-val numbers = [1, 2, 3, 4, 5]
-val strings = ['a', 'b', 'c']
-val mixed = [1, 'two', true]
+val numbers = [1, 2, 3, 4, 5]            // List<i32>
+val strings = ['a', 'b', 'c']            // List<string>
+val mixed = [1, 'two', true]             // List<i32 | string | bool>
+val empty: List<i32> = []                // Empty list with explicit type
 ```
 
 ---
@@ -181,9 +182,133 @@ val mixed = [1, 'two', true]
 
 #### Collection Types
 
-- `List<T>`: Ordered collection of elements
+- `List<T>`: Immutable ordered collection of elements
 - `I32Range`: Range of i32 values with exclusive upper bound (e.g., `1..10`)
 - `F64Range`: Range of f64 values with exclusive upper bound (e.g., `1.0..10.0`)
+
+##### List<T> Type
+
+The `List<T>` type represents an ordered collection of elements of type `T`. For configuration management convenience, lists are **mutable during construction** and become **immutable after execution completes**. List literals are created using square bracket notation:
+
+```stria
+val numbers: List<i32> = [1, 2, 3, 4, 5]
+val strings: List<string> = ['hello', 'world']
+val mixed: List<string | i32> = ['text', 42, 'more text']
+val empty: List<i32> = []
+```
+
+###### Mutability Model
+
+Lists in Stria follow a **build-time mutable, runtime immutable** model:
+
+- **During configuration construction**: Lists can be modified using methods like `push()`, `pop()`, `insert()`, `remove()`
+- **After execution completes**: Lists become immutable and cannot be modified
+- **Type safety**: All operations are type-safe and checked at compile time
+
+```stria
+val servers = List<string>()
+servers.push('web1.example.com')    // Valid during construction
+servers.push('web2.example.com')    // Valid during construction
+servers[0] = 'api.example.com'      // Valid during construction
+// After execution: servers becomes immutable
+```
+
+###### Type Inference
+
+List literals support type inference:
+
+```stria
+val inferredNumbers = [1, 2, 3]          // List<i32>
+val inferredStrings = ['a', 'b', 'c']    // List<string>
+val inferredMixed = [1, 'two', true]     // List<i32 | string | bool>
+```
+
+###### Array Syntax Shorthand
+
+In certain contexts, `Type[]` serves as shorthand for `List<Type>`:
+
+```stria
+// These are equivalent:
+val items1: List<string> = ['a', 'b', 'c']
+val items2: string[] = ['a', 'b', 'c']
+
+// In struct definitions:
+struct Container {
+    repeated items: string[] = []  // Equivalent to List<string>
+}
+```
+
+###### Configuration Building Examples
+
+The mutable-during-construction model makes configuration building intuitive:
+
+```stria
+// Building server configurations
+val servers = List<ServerConfig>()
+servers.push(ServerConfig { host = 'web1.example.com', port = 80 })
+servers.push(ServerConfig { host = 'web2.example.com', port = 80 })
+
+// Conditional configuration
+if (enableHttps) {
+    servers.forEach { it.port = 443 }
+    servers.push(ServerConfig { host = 'ssl.example.com', port = 443 })
+}
+
+// Environment-specific adjustments
+if (isDevelopment) {
+    servers.clear()
+    servers.push(ServerConfig { host = 'localhost', port = 8080 })
+}
+
+// Functional transformations
+val httpsServers = servers.filter { it.port == 443 }
+val hostnames = servers.map { it.host }
+val isAllSecure = servers.all { it.port == 443 }
+
+// Database configuration with dynamic setup
+struct DatabaseConfig {
+    repeated hosts: string[] = []
+
+    init {
+        // Add primary host
+        hosts.push('primary.db.example.com')
+
+        // Add replicas based on environment
+        if (isProduction) {
+            hosts.extend(['replica1.db.example.com', 'replica2.db.example.com'])
+        } else {
+            hosts.push('dev.db.example.com')
+        }
+
+        // Remove duplicates and sort for consistency
+        hosts = hosts.distinct().sorted()
+    }
+}
+
+// Configuration with filtering and deduplication
+struct ServiceConfig {
+    repeated endpoints: string[] = []
+
+    init {
+        // Add various endpoints
+        endpoints.push('api.example.com')
+        endpoints.push('api.example.com')  // Duplicate
+        endpoints.push('beta.api.example.com')
+        endpoints.push('admin.api.example.com')
+
+        // Remove duplicates
+        endpoints = endpoints.distinct()
+
+        // Filter out beta endpoints in production
+        if (isProduction) {
+            endpoints = endpoints.filter { !it.contains('beta') }
+        }
+
+        // Sort for consistency
+        endpoints = endpoints.sorted()
+    }
+}
+```
 
 #### Optional Types
 
@@ -493,12 +618,40 @@ val smallInt = largeInt as u8       // 232 (wraps around)
 val floatPrecision = 3.14159f64 as f32  // May lose precision
 ```
 
-### Array Operations
+### List Operations
 
 ```stria
 val list = [1, 2, 3, 4, 5]
+
+// Index access
 val element = list[2]       // 3
-val slice = list[1..3]      // [2, 3, 4]
+val slice = list[1..3]      // [2, 3] (exclusive upper bound)
+val inclusiveSlice = list[1..=3]  // [2, 3, 4] (inclusive)
+
+// Mutation during construction
+list.push(6)                // [1, 2, 3, 4, 5, 6]
+list[0] = 10                // [10, 2, 3, 4, 5, 6]
+list.insert(1, 20)          // [10, 20, 2, 3, 4, 5, 6]
+
+// Properties and methods
+val size = list.size()      // 7
+val isEmpty = list.isEmpty() // false
+val contains = list.contains(3) // true
+
+// Functional operations
+val doubled = list.map { it * 2 }     // [20, 40, 4, 6, 8, 10, 12]
+val evens = list.filter { it % 2 == 0 } // [10, 20, 2, 4, 6]
+val sum = list.reduce { acc, it -> acc + it } // 45
+
+// Distinct and sorting (useful for configuration)
+val duplicates = [1, 2, 2, 3, 1, 4]
+val unique = duplicates.distinct()    // [1, 2, 3, 4]
+val sorted = unique.sorted()          // [1, 2, 3, 4]
+
+// List concatenation
+val other = [7, 8, 9]
+val combined = list + other  // [10, 20, 2, 3, 4, 5, 6, 7, 8, 9]
+val spread = [...list, 100, ...other] // [10, 20, 2, 3, 4, 5, 6, 100, 7, 8, 9]
 ```
 
 ---
@@ -987,6 +1140,12 @@ val container = Container {
     items('second')
     items('third')
 }
+
+// Access the underlying list
+val itemsList = container.items  // List<string>
+itemsList.push('fourth')         // Add during construction
+itemsList.remove('second')       // Remove during construction
+val count = itemsList.size()     // 3
 ```
 
 #### Repeated Properties with Constructor Selection
@@ -1871,11 +2030,171 @@ val length = str.length()
 
 #### List Methods
 
+The `List<T>` type provides comprehensive methods combining the best of Rust's `Vec<T>` and Kotlin's `MutableList<T>`:
+
+##### Mutation Methods (Available During Construction)
+
 ```stria
-// List functions
-val size = list.size()
-val first = list.first()
-val last = list.last()
+val items = ['a', 'b', 'c']
+
+// Add elements
+items.push('d')                     // Add to end: ['a', 'b', 'c', 'd']
+items.insert(1, 'x')               // Insert at index: ['a', 'x', 'b', 'c', 'd']
+
+// Remove elements
+val last = items.pop()             // Remove and return last: 'd'
+val removed = items.removeAt(1)    // Remove at index: removes 'x'
+val success = items.remove('b')    // Remove by value: true if found
+items.clear()                      // Remove all elements: []
+
+// Modify elements
+items[0] = 'A'                     // Set by index
+items.set(0, 'A')                  // Alias for index assignment
+```
+
+##### Access Methods
+
+```stria
+val numbers = [1, 2, 3, 4, 5]
+
+// Basic access
+val size = numbers.size()          // 5
+val length = numbers.length()      // Alias for size(): 5
+val isEmpty = numbers.isEmpty()    // false
+val isNotEmpty = numbers.isNotEmpty() // true
+
+// Element access
+val first = numbers.first()        // 1
+val last = numbers.last()          // 5
+val element = numbers[2]           // 3 (index access)
+val element = numbers.get(2)       // 3 (method access)
+
+// Safe access
+val firstOrNull = numbers.firstOrNull()  // 1 (or null if empty)
+val lastOrNull = numbers.lastOrNull()    // 5 (or null if empty)
+val getOrNull = numbers.getOrNull(10)    // null (index out of bounds)
+val getOrElse = numbers.getOrElse(10, 0) // 0 (default value)
+```
+
+##### Search and Query Methods
+
+```stria
+val words = ['hello', 'world', 'test']
+
+// Contains and search
+val contains = words.contains('hello')     // true
+val indexOf = words.indexOf('world')       // 1
+val lastIndexOf = words.lastIndexOf('test') // 2
+
+// Predicates
+val hasLong = words.any { it.length() > 4 }     // true
+val allLong = words.all { it.length() > 3 }     // true
+val countLong = words.count { it.length() > 4 } // 2
+
+// Find operations
+val found = words.find { it.startsWith('w') }      // 'world'
+val foundOrNull = words.findOrNull { it.length() > 10 } // null
+val foundLast = words.findLast { it.length() > 3 }     // 'test'
+```
+
+##### Functional Methods
+
+```stria
+val numbers = [1, 2, 3, 4, 5]
+
+// Transform operations
+val doubled = numbers.map { it * 2 }           // [2, 4, 6, 8, 10]
+val strings = numbers.map { it.toString() }    // ['1', '2', '3', '4', '5']
+val filtered = numbers.filter { it > 3 }       // [4, 5]
+val evens = numbers.filter { it % 2 == 0 }     // [2, 4]
+
+// Reduce operations
+val sum = numbers.reduce { acc, it -> acc + it }     // 15
+val product = numbers.fold(1) { acc, it -> acc * it } // 120
+val joined = numbers.joinToString(', ')              // '1, 2, 3, 4, 5'
+
+// Side effects
+numbers.forEach { print(it) }                 // Prints: 12345
+numbers.forEachIndexed { index, value ->
+    print(`${index}: ${value}`)               // Prints: 0: 1, 1: 2, ...
+}
+
+// Utility operations for configuration
+val unique = numbers.distinct()                      // Remove duplicates
+val uniqueBy = numbers.distinctBy { it % 3 }         // Remove by key: [1, 2, 3]
+val sortedUnique = numbers.distinct().sorted()       // [1, 2, 3, 4, 5]
+```
+
+##### Slicing and Sublist Methods
+
+```stria
+val items = ['a', 'b', 'c', 'd', 'e']
+
+// Range access
+val slice = items[1..3]            // ['b', 'c'] (exclusive upper bound)
+val inclusiveSlice = items[1..=3]  // ['b', 'c', 'd'] (inclusive)
+val sublist = items.subList(1, 3)  // ['b', 'c'] (fromIndex, toIndex)
+
+// Take and drop
+val first3 = items.take(3)         // ['a', 'b', 'c']
+val last3 = items.takeLast(3)      // ['c', 'd', 'e']
+val skip2 = items.drop(2)          // ['c', 'd', 'e']
+val skipLast2 = items.dropLast(2)  // ['a', 'b', 'c']
+```
+
+##### List Combination Methods
+
+```stria
+val list1 = [1, 2, 3]
+val list2 = [4, 5, 6]
+val single = [7]
+
+// Concatenation
+val combined = list1 + list2       // [1, 2, 3, 4, 5, 6]
+val withSingle = list1 + single    // [1, 2, 3, 7]
+val withElement = list1 + 4        // [1, 2, 3, 4]
+
+// Spread operator
+val spread = [...list1, ...list2]  // [1, 2, 3, 4, 5, 6]
+val mixed = [0, ...list1, 10, ...list2] // [0, 1, 2, 3, 10, 4, 5, 6]
+
+// Extend (mutable)
+list1.extend(list2)                // list1 becomes [1, 2, 3, 4, 5, 6]
+```
+
+##### Sorting and Ordering Methods
+
+```stria
+val numbers = [3, 1, 4, 1, 5, 9, 2, 6]
+
+// Sort operations (return new list)
+val sorted = numbers.sorted()                    // [1, 1, 2, 3, 4, 5, 6, 9]
+val reversed = numbers.reversed()               // [6, 2, 9, 5, 1, 4, 1, 3]
+val sortedBy = numbers.sortedBy { -it }         // [9, 6, 5, 4, 3, 2, 1, 1]
+
+// In-place sort operations (mutate original)
+numbers.sort()                                  // numbers becomes [1, 1, 2, 3, 4, 5, 6, 9]
+numbers.reverse()                              // numbers becomes [9, 6, 5, 4, 3, 2, 1, 1]
+numbers.shuffle()                              // numbers becomes randomly shuffled
+```
+
+##### Utility Methods
+
+```stria
+val items = ['a', 'b', 'c', 'a', 'b']
+
+// Distinct operations (useful for configuration)
+val unique = items.distinct()                   // ['a', 'b', 'c']
+val uniqueBy = items.distinctBy { it.length() } // Distinct by computed key
+val grouped = items.groupBy { it }              // {'a': ['a', 'a'], 'b': ['b', 'b'], 'c': ['c']}
+
+// Conversion
+val array = items.toArray()                     // Convert to array
+val string = items.toString()                   // "['a', 'b', 'c', 'a', 'b']"
+
+// Validation
+val isValid = items.isValidIndex(2)             // true
+val isSorted = [1, 2, 3].isSorted()            // true
 ```
 
 ---
