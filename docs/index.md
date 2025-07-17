@@ -66,6 +66,58 @@ A Stria project consists of two main types of files:
 - **Expression-oriented**: Everything is an expression that returns a value
 - **Controlled Side Effects**: Limited to essential configuration operations
 
+### Configuration Language Nature
+
+Stria is designed as a **configuration description language** that compiles to simple data formats like JSON, YAML, or TOML. This fundamental design principle influences all language features:
+
+**Compilation Target**
+
+```stria
+// Stria configuration:
+struct ServerConfig {
+    fun host(value: string) { this.host = value }
+    fun port(value: u16) { this.port = value }
+    fun ssl(enabled: bool) { this.ssl = enabled }
+
+    host: string
+    port: u16
+    ssl: bool
+}
+
+val config = ServerConfig {
+    host("api.example.com")
+    port(443)
+    ssl(true)
+}
+```
+
+```json
+// Compiles to JSON:
+{
+  "host": "api.example.com",
+  "port": 443,
+  "ssl": true
+}
+```
+
+**Configuration-Oriented Design**
+
+- **Data-focused**: Methods are used to set configuration values, not to perform operations
+- **Declarative**: Describes what the configuration should be, not how to achieve it
+- **Stateless**: No runtime state changes or side effects beyond configuration assembly
+- **Serializable**: All constructs map to simple data structures
+
+**Not a General-Purpose Language**
+Unlike general-purpose programming languages, Stria does not support:
+
+- Runtime I/O operations
+- Database connections
+- Network requests
+- File system operations
+- Mutable state management
+
+Instead, Stria focuses on expressing configuration logic, validation, and data transformation that can be evaluated at compile time.
+
 ---
 
 ## Lexical Structure
@@ -997,6 +1049,57 @@ val example = Example(42) {
 // Step 3: processed = 86 (init block execution: 43 * 2)
 ```
 
+#### Design Rationale for Execution Order
+
+The execution order (Parameter Assignment → Postfix Lambda → Init Block) is carefully designed to support flexible and intuitive configuration patterns:
+
+**1. Parameter Assignment First**
+Constructor parameters are assigned immediately to establish the basic structure. This ensures that:
+
+- The instance has a valid initial state
+- Subsequent steps can reference and modify these values
+- Type safety is maintained throughout initialization
+
+**2. Postfix Lambda Before Init Block**
+The postfix lambda executes before the init block to enable a powerful configuration pattern:
+
+```stria
+struct ServerConfig {
+    init(this.baseUrl) {
+        // Step 3: Final validation and derived values
+        if (!baseUrl.startsWith("http")) {
+            error("Invalid URL format")
+        }
+        isSecure = baseUrl.startsWith("https")
+        normalizedUrl = baseUrl.trimEnd('/')
+    }
+
+    baseUrl: string
+    isSecure: bool
+    normalizedUrl: string
+}
+
+// The postfix lambda allows customization before final processing:
+val config = ServerConfig("http://example.com") {
+    // Step 2: Customize the base URL before validation
+    baseUrl = baseUrl.replace("http://", "https://")
+}
+// Result: isSecure = true, normalizedUrl = "https://example.com"
+```
+
+**3. Benefits of This Order**
+
+- **Customization before validation**: The postfix lambda can modify parameter values before the init block performs final validation and computations
+- **Layered configuration**: Parameters provide defaults, postfix lambdas provide customization, and init blocks provide finalization
+- **Predictable behavior**: Users can rely on this order when designing complex initialization logic
+
+**4. Alternative Approaches Considered**
+If the init block ran before the postfix lambda, it would limit flexibility:
+
+- Validation would occur before user customization
+- Derived values would be computed prematurely
+- The pattern would be less intuitive for configuration use cases
+
 ### Multiple Initializers
 
 ```stria
@@ -1286,6 +1389,8 @@ struct Calculator {
 
 ### Method Call Rules
 
+#### Single Call Constraint
+
 - Struct methods can be called only once by default
 - Global/built-in functions can be called multiple times
 - Getters can be called multiple times
@@ -1296,6 +1401,87 @@ struct Example {
     get property(): string { /* ... */ }
 }
 ```
+
+#### Design Rationale for Single Call Constraint
+
+The "methods can only be called once" rule is a fundamental design principle in Stria that serves several critical purposes in configuration management:
+
+**1. Preventing Duplicate Configuration**
+This constraint prevents accidental duplicate configuration entries, which is the primary motivation for this rule:
+
+```stria
+struct Config {
+    fun version(major: u16, minor: u16, patch: u16) {
+        this.version = Version(major, minor, patch)
+    }
+    version: Version
+}
+
+// This is the intended usage pattern:
+val config = Config {
+    version(0, 0, 1)
+    // version(0, 0, 2) // This would be prevented by the single-call constraint
+}
+```
+
+**2. Configuration Consistency**
+Since Stria compiles to simple data formats like JSON, the single-call constraint ensures that configuration properties have exactly one value:
+
+```stria
+// Stria configuration:
+struct ServerConfig {
+    fun host(value: string) { this.host = value }
+    fun port(value: u16) { this.port = value }
+    host: string
+    port: u16
+}
+
+val config = ServerConfig {
+    host("localhost")
+    port(8080)
+    // host("example.com") // Prevented - would cause ambiguity in final JSON
+}
+
+// Compiles to clean JSON:
+// {
+//   "host": "localhost",
+//   "port": 8080
+// }
+```
+
+**3. Deterministic Configuration Evaluation**
+This constraint ensures that configuration evaluation is deterministic and produces consistent results, which is essential for:
+
+- Reproducible builds
+- Predictable deployment configurations
+- Reliable configuration validation
+
+**4. Problems Without This Constraint**
+Without the single-call constraint, configuration would become ambiguous:
+
+```stria
+// Problematic scenario without single-call constraint:
+struct DatabaseConfig {
+    fun timeout(seconds: u32) { this.timeout = seconds }
+    timeout: u32
+}
+
+val config = DatabaseConfig {
+    timeout(30)   // Should this be the final value?
+    timeout(60)   // Or should this override the previous one?
+}
+
+// Resulting JSON would be ambiguous:
+// Which timeout value should be used?
+```
+
+**5. Alignment with Configuration Languages**
+This constraint aligns Stria with the nature of configuration languages:
+
+- JSON objects have unique keys
+- YAML mappings have unique keys
+- Configuration files typically specify each setting once
+- Multiple values for the same configuration key would be meaningless
 
 ### Lambda and Higher-Order Functions
 
@@ -2000,18 +2186,26 @@ val f32Sine = f32.sin(pi_f32 / 2)     // 1.0f32
 // Type conversion functions (cast operations)
 fun i32(value: any): i32 {
     // Converts value to i32 type
+    // Note: 'any' type does not exist in Stria's type system
+    // This function exceptionally accepts any type through special compiler handling
 }
 
 fun f64(value: any): f64 {
     // Converts value to f64 type
+    // Note: 'any' type does not exist in Stria's type system
+    // This function exceptionally accepts any type through special compiler handling
 }
 
 fun string(value: any): string {
     // Converts value to string type
+    // Note: 'any' type does not exist in Stria's type system
+    // This function exceptionally accepts any type through special compiler handling
 }
 
 fun bool(value: any): bool {
     // Converts value to bool type
+    // Note: 'any' type does not exist in Stria's type system
+    // This function exceptionally accepts any type through special compiler handling
 }
 ```
 
