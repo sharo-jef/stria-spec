@@ -516,6 +516,11 @@ struct Point {
 }
 ```
 
+For default initialization, the execution order is:
+
+1. **Postfix Lambda**: Execution of the implicit postfix lambda block (if provided during instantiation)
+2. **Initialization Block**: Execution of the `init` block defined in the struct
+
 #### Parameterized Initialization
 
 ```stria
@@ -528,6 +533,11 @@ struct Point {
     y: i32
 }
 ```
+
+For parameterized initialization, the execution order is:
+
+1. **Postfix Lambda**: Execution of the implicit postfix lambda block (if provided during instantiation)
+2. **Initialization Block**: Execution of the `init` block defined in the struct
 
 #### Primary Constructor
 
@@ -566,6 +576,34 @@ struct ServerConfig {
 }
 ```
 
+#### Primary Constructor Execution Order
+
+Primary constructors execute in the following order:
+
+1. **Parameter Assignment**: Direct assignment of constructor parameters (e.g., `this.x`, `this.y`)
+2. **Postfix Lambda**: Execution of the implicit postfix lambda block (if provided during instantiation)
+3. **Initialization Block**: Execution of the `init` block defined in the struct
+
+```stria
+struct Example {
+    init(this.value) {
+        // Step 3: This runs after parameter assignment and postfix lambda
+        processed = value * 2
+    }
+    value: i32
+    processed: i32
+}
+
+// Instantiation example showing execution order:
+val example = Example(42) {
+    // Step 2: This postfix lambda runs after parameter assignment
+    value = value + 1  // value becomes 43
+}
+// Step 1: value = 42 (parameter assignment)
+// Step 2: value = 43 (postfix lambda execution)
+// Step 3: processed = 86 (init block execution: 43 * 2)
+```
+
 ### Multiple Initializers
 
 ```stria
@@ -592,12 +630,108 @@ struct Version {
 
 ### Struct Instantiation
 
+Struct instantiation in Stria supports multiple syntaxes with sophisticated initialization mechanisms based on implicit lambda arguments.
+
+#### Basic Instantiation
+
 ```stria
-val point1 = Point()
-val point2 = Point(10, 20)
-val point3 = Point {
+val point1 = Point()                    // Default constructor
+val point2 = Point(10, 20)              // Parameterized constructor
+val point3 = Point {                    // Block initialization
     x = 5
     y = 10
+}
+```
+
+#### Block Initialization Syntax
+
+The block initialization syntax `Point { ... }` is actually a shorthand for `Point() { ... }`:
+
+```stria
+// These are equivalent:
+val point1 = Point { x = 5; y = 10 }
+val point2 = Point() { x = 5; y = 10 }
+```
+
+#### Postfix Lambda Semantics
+
+Similar to Kotlin's postfix lambdas, the block initialization can also be written as:
+
+```stria
+val point = Point({ -> x = 5; y = 10 })
+```
+
+This reveals that struct constructors implicitly have a final parameter of type `Point.() -> Unit` (using Kotlin-style notation).
+
+#### Implicit Lambda Arguments in Constructors
+
+All struct constructors, even the most abbreviated forms, implicitly accept a lambda parameter as their final argument:
+
+```stria
+// This apparent no-argument constructor:
+struct Point {
+    init { x = 0; y = 0 }
+    x: i32
+    y: i32
+}
+
+// Is actually equivalent to (shown as Kotlin-style pseudocode):
+struct Point {
+    init(action: Point.() -> Unit) {  // Kotlin-style pseudocode - not valid Stria syntax
+        Point.action()  // Execute the lambda in the context of this instance
+        x = 0
+        y = 0
+    }
+    x: i32
+    y: i32
+}
+```
+
+#### Syntax Requirements
+
+To distinguish struct instantiation from variable references, instantiation requires explicit constructor syntax:
+
+```stria
+// Required syntax:
+val point1 = Point()    // Explicit constructor call
+val point2 = Point{}    // Block initialization (shorthand for Point(){})
+
+// Invalid syntax:
+val point3 = Point      // This would be a variable reference, not instantiation
+```
+
+#### Optional Lambda Arguments
+
+Constructor calls have an exceptional rule: the final lambda argument can be omitted entirely:
+
+```stria
+// These are all valid:
+val point1 = Point(1, 2)        // No lambda provided
+val point2 = Point(1, 2){}      // Empty lambda provided
+val point3 = Point(1, 2){       // Lambda with initialization
+    // Additional setup
+}
+```
+
+This exception prevents the need to always provide a trailing lambda like `Point(1, 2){}` when no additional initialization is needed. This rule applies **only** to constructor calls and is not applicable to regular function calls.
+
+#### Complex Initialization Examples
+
+```stria
+// Combining parameters and block initialization
+val server = ServerConfig("localhost", 8080) {
+    timeout = 30
+    maxConnections = 100
+}
+
+// Multiple initialization steps
+val database = DatabaseConfig {
+    host = "db.example.com"
+    port = 5432
+    credentials {
+        username = "admin"
+        password = getEnv("DB_PASSWORD")!
+    }
 }
 ```
 
