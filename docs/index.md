@@ -2003,17 +2003,17 @@ struct MainStruct {
 ### Function Declaration
 
 ```stria
-fun add(a: i32, b: i32): i32 {
-    a + b
+fun buildConnectionString(host: string, port: u16, database: string): string {
+    `${host}:${port}/${database}`
 }
 
 // Function with no return value (void return type is optional)
-fun printMessage(message: string) {
+fun validateConfiguration(config: ServerConfig) {
     // Implementation here
 }
 
 // Explicit void return type (optional)
-fun printMessageExplicit(message: string): void {
+fun initializeDefaults(config: ServerConfig): void {
     // Implementation here
 }
 ```
@@ -2032,15 +2032,15 @@ Functions can have explicit return types or omit them:
 Functions in Stria follow an expression-oriented approach where the last expression in a function body becomes the return value:
 
 ```stria
-fun calculateSum(a: i32, b: i32): i32 {
-    val intermediate = a * 2
-    val result = intermediate + b
-    result  // This expression becomes the return value
+fun buildEndpoint(host: string, port: u16): string {
+    val protocol = if (port == 443) "https" else "http"
+    val endpoint = `${protocol}://${host}:${port}`
+    endpoint  // This expression becomes the return value
 }
 
-fun getGreeting(name: string): string {
-    val prefix = "Hello, "
-    prefix + name  // This expression becomes the return value
+fun getConfigPath(env: string): string {
+    val basePath = "/etc/myapp"
+    basePath + "/" + env + ".conf"  // This expression becomes the return value
 }
 ```
 
@@ -2048,15 +2048,16 @@ fun getGreeting(name: string): string {
 Functions can use explicit `return` statements to return values early or for clarity:
 
 ```stria
-fun findMax(a: i32, b: i32): i32 {
-    if (a > b) return a
-    return b
+fun selectDatabase(env: string): string {
+    if (env == "production") return "prod_db"
+    if (env == "staging") return "stage_db"
+    return "dev_db"
 }
 
-fun processValue(value: i32): string {
-    if (value < 0) return "negative"
-    if (value == 0) return "zero"
-    return "positive"
+fun validatePort(port: u16): string {
+    if (port < 1) return "invalid"
+    if (port > 65535) return "invalid"
+    return "valid"
 }
 ```
 
@@ -2064,12 +2065,12 @@ fun processValue(value: i32): string {
 Functions that return `void` (or have no explicit return type) ignore the value of the final expression:
 
 ```stria
-fun printInfo(message: string): void {
+fun validateConfig(config: ServerConfig): void {
     // Implementation here
     42  // This value is ignored - function returns void
 }
 
-fun logMessage(message: string) {  // Implicit void return
+fun applyDefaults(config: ServerConfig) {  // Implicit void return
     // Implementation here
     "some string"  // This value is ignored - function returns void
 }
@@ -2079,10 +2080,10 @@ fun logMessage(message: string) {  // Implicit void return
 Functions can mix explicit returns with implicit returns:
 
 ```stria
-fun processNumber(value: i32): string {
-    if (value < 0) return "negative"  // Explicit return
-    if (value == 0) return "zero"     // Explicit return
-    "positive"  // Implicit return (last expression)
+fun getConfigValue(key: string, defaultValue: string): string {
+    if (key == "database") return "localhost"  // Explicit return
+    if (key == "port") return "5432"           // Explicit return
+    defaultValue  // Implicit return (last expression)
 }
 ```
 
@@ -3678,8 +3679,8 @@ Generates:
 #### Function Declaration
 
 ```stria
-fun add(a: i32, b: i32): i32 {
-    a + b
+fun buildConnectionString(host: string, port: u16): string {
+    `${host}:${port}`
 }
 ```
 
@@ -3692,7 +3693,7 @@ Generates:
     receiverType: null,
     name: {
         type: 'Identifier',
-        name: 'add'
+        name: 'buildConnectionString'
     },
     annotations: [],
     parameters: [
@@ -3700,43 +3701,54 @@ Generates:
             type: 'Parameter',
             name: {
                 type: 'Identifier',
-                name: 'a'
+                name: 'host'
             },
             typeRef: {
                 type: 'PrimitiveType',
-                name: 'i32'
+                name: 'string'
             }
         },
         {
             type: 'Parameter',
             name: {
                 type: 'Identifier',
-                name: 'b'
+                name: 'port'
             },
             typeRef: {
                 type: 'PrimitiveType',
-                name: 'i32'
+                name: 'u16'
             }
         }
     ],
     returnType: {
         type: 'PrimitiveType',
-        name: 'i32'
+        name: 'string'
     },
     body: [
         {
             type: 'ExpressionStatement',
             expression: {
-                type: 'BinaryExpression',
-                operator: '+',
-                left: {
-                    type: 'Identifier',
-                    name: 'a'
-                },
-                right: {
-                    type: 'Identifier',
-                    name: 'b'
-                }
+                type: 'TemplateLiteral',
+                parts: [
+                    {
+                        type: 'TemplateInterpolation',
+                        expression: {
+                            type: 'Identifier',
+                            name: 'host'
+                        }
+                    },
+                    {
+                        type: 'TemplateStringPart',
+                        value: ':'
+                    },
+                    {
+                        type: 'TemplateInterpolation',
+                        expression: {
+                            type: 'Identifier',
+                            name: 'port'
+                        }
+                    }
+                ]
             }
         }
     ]
