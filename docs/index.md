@@ -885,17 +885,15 @@ struct Calculator {
 }
 ```
 
-### Function Call Rules
+### Method Call Rules
 
 - Struct methods can be called only once by default
-- Use `repeated` modifier for multiple calls
 - Global/built-in functions can be called multiple times
 - Getters can be called multiple times
 
 ```stria
 struct Example {
     fun onceOnly() { /* ... */ }
-    repeated fun multipleAllowed() { /* ... */ }
     get property(): string { /* ... */ }
 }
 ```
