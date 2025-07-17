@@ -428,6 +428,79 @@ struct Person {
 }
 ```
 
+### Property Assignment Requirements
+
+As a configuration description language, Stria has unique property assignment requirements that differ from typical programming languages:
+
+#### Required Properties
+
+- Properties without the `?:` modifier are considered required
+- Required properties must be assigned at least once before execution completes
+- Properties do not need to be assigned during initialization if they are assigned later during execution
+- At execution completion, all required properties must have been assigned at least once
+
+#### Optional Properties
+
+- Properties with the `?:` modifier are considered optional
+- Optional properties are implicitly initialized with `null` if not explicitly assigned
+- Optional properties can remain `null` throughout execution without causing errors
+- Optional properties can be assigned a value at any time during execution
+
+#### Assignment Validation
+
+```stria
+struct DatabaseConfig {
+    host: string      // Required - must be assigned before execution completes
+    port: u16         // Required - must be assigned before execution completes
+    username: string  // Required - must be assigned before execution completes
+    password?: string // Optional - can remain unassigned
+}
+
+// Valid: All required properties assigned during initialization
+val config1 = DatabaseConfig {
+    host = 'localhost'
+    port = 5432
+    username = 'admin'
+}
+
+// Also valid: Required properties assigned later during execution
+val config2 = DatabaseConfig {}
+config2.host = 'localhost'
+config2.port = 5432
+config2.username = 'admin'
+// password remains null (implicitly initialized)
+// Execution completes successfully as all required properties are assigned
+
+// Valid: Optional property explicitly assigned
+val config3 = DatabaseConfig {
+    host = 'localhost'
+    port = 5432
+    username = 'admin'
+    password = 'secret123'  // Optional property explicitly assigned
+}
+
+// Valid: Optional property accessed as null
+val config4 = DatabaseConfig {
+    host = 'localhost'
+    port = 5432
+    username = 'admin'
+}
+val hasPassword = config4.password != null  // false, password is null
+
+// Invalid: Would cause runtime error
+val config5 = DatabaseConfig {
+    host = 'localhost'
+    port = 5432
+    // username not assigned - runtime error at execution completion
+}
+```
+
+#### Execution Completion Validation
+
+- The Stria runtime validates that all required properties have been assigned before execution completes
+- Unassigned required properties result in a runtime error with clear indication of which properties are missing
+- This validation occurs after all configuration processing is complete
+
 ### Initialization Methods
 
 #### Default Initialization
