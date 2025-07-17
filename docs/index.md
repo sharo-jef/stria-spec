@@ -539,6 +539,33 @@ struct Point {
 }
 ```
 
+#### Primary Constructor with Initialization Block
+
+Primary constructors can also include an initialization block for additional setup:
+
+```stria
+struct Point {
+    init(this.x, this.y) {
+        originDistance = math.sqrt(x ** 2 + y ** 2)
+    }
+    x: i32
+    y: i32
+    originDistance: f64
+}
+
+// Configuration example
+struct ServerConfig {
+    init(this.host, this.port) {
+        url = `http://${host}:${port}`
+        isSecure = port == 443
+    }
+    host: string
+    port: u16
+    url: string
+    isSecure: bool
+}
+```
+
 ### Multiple Initializers
 
 ```stria
