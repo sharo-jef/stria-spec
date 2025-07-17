@@ -19,7 +19,8 @@ Date: none
 11. [Schema System](#schema-system)
 12. [Standard Library](#standard-library)
 13. [Error Handling](#error-handling)
-14. [Future Features](#future-features)
+14. [AST Structure](#ast-structure)
+15. [Future Features](#future-features)
 
 ---
 
@@ -3210,6 +3211,601 @@ struct Config {
     port: u16
 }
 ```
+
+---
+
+## AST Structure
+
+### Overview
+
+The Abstract Syntax Tree (AST) is the intermediate representation of Stria source code used by parsers, compilers, and language tools. This section defines the structure and types of AST nodes for the Stria language.
+
+### Common Node Structure
+
+All AST nodes share a common base structure:
+
+```typescript
+interface BaseNode {
+  type: string;
+  loc: Location;
+}
+
+interface Location {
+  start: Position;
+  end: Position;
+}
+
+interface Position {
+  line: number; // 1-based line number
+  column: number; // 0-based column number (LSP compatible)
+}
+```
+
+#### Position Information
+
+**Line Numbers**: 1-based numbering (first line is line 1)
+**Column Numbers**: 0-based numbering (first column is column 0)
+
+This convention aligns with the Language Server Protocol (LSP) specification, which uses:
+
+- 1-based line numbers
+- 0-based column numbers
+
+This ensures seamless integration with VSCode and other LSP-compatible editors without requiring position conversion.
+
+### Node Type Definitions
+
+#### Program Structure
+
+```typescript
+interface Program extends BaseNode {
+  type: "Program";
+  body: Statement[];
+}
+```
+
+#### Declarations
+
+```typescript
+interface SchemaDirective extends BaseNode {
+  type: "SchemaDirective";
+  path: string;
+}
+
+interface UseStatement extends BaseNode {
+  type: "UseStatement";
+  identifier: Identifier;
+}
+
+interface VariableDeclaration extends BaseNode {
+  type: "VariableDeclaration";
+  kind: "val" | "var";
+  name: Identifier;
+  typeRef: TypeExpression | null;
+  value: Expression;
+  annotations: Annotation[];
+}
+
+interface FunctionDeclaration extends BaseNode {
+  type: "FunctionDeclaration";
+  isInfix: boolean;
+  receiverType: TypeExpression | null;
+  name: Identifier;
+  annotations: Annotation[];
+  parameters: Parameter[];
+  returnType: TypeExpression | null;
+  body: Statement[];
+}
+
+interface StructDeclaration extends BaseNode {
+  type: "StructDeclaration";
+  name: Identifier;
+  annotations: Annotation[];
+  body: StructMember[];
+}
+
+interface UnionDeclaration extends BaseNode {
+  type: "UnionDeclaration";
+  name: Identifier;
+  annotations: Annotation[];
+  types: TypeExpression[];
+}
+
+interface SchemaDeclaration extends BaseNode {
+  type: "SchemaDeclaration";
+  annotations: Annotation[];
+  body: PropertyDeclaration[];
+}
+
+interface InitDeclaration extends BaseNode {
+  type: "InitDeclaration";
+  annotations: Annotation[];
+  parameters: Parameter[];
+  body: Statement[];
+}
+
+interface MethodDeclaration extends BaseNode {
+  type: "MethodDeclaration";
+  name: Identifier;
+  annotations: Annotation[];
+  isPrivate: boolean;
+  parameters: Parameter[];
+  returnType: TypeExpression | null;
+  body: Statement[];
+}
+
+interface GetterDeclaration extends BaseNode {
+  type: "GetterDeclaration";
+  name: Identifier;
+  annotations: Annotation[];
+  returnType: TypeExpression | null;
+  body: Statement[];
+}
+
+interface PropertyDeclaration extends BaseNode {
+  type: "PropertyDeclaration";
+  name: Identifier;
+  annotations: Annotation[];
+  isPrivate: boolean;
+  isOptional: boolean;
+  typeRef: TypeExpression;
+  defaultValue?: Expression;
+}
+
+interface RepeatedDeclaration extends BaseNode {
+  type: "RepeatedDeclaration";
+  name: Identifier;
+  annotations: Annotation[];
+  typeRef: TypeExpression;
+  mapping?: MappingBlock;
+}
+```
+
+#### Expressions
+
+```typescript
+interface CallExpression extends BaseNode {
+  type: "CallExpression";
+  callee: Expression;
+  arguments: Expression[];
+}
+
+interface BinaryExpression extends BaseNode {
+  type: "BinaryExpression";
+  operator: string;
+  left: Expression;
+  right: Expression;
+}
+
+interface LambdaExpression extends BaseNode {
+  type: "LambdaExpression";
+  parameters: Parameter[];
+  body: Statement[];
+}
+
+interface IfExpression extends BaseNode {
+  type: "IfExpression";
+  condition: Expression;
+  then: Statement[];
+  else?: Statement[];
+}
+
+interface InfixCall extends BaseNode {
+  type: "InfixCall";
+  functionName: string;
+  left: Expression;
+  right: Expression;
+}
+
+interface RangeExpression extends BaseNode {
+  type: "RangeExpression";
+  from: Expression;
+  to: Expression;
+  inclusive: boolean;
+}
+
+interface TemplateLiteral extends BaseNode {
+  type: "TemplateLiteral";
+  parts: (TemplateStringPart | TemplateInterpolation)[];
+}
+
+interface TemplateStringPart extends BaseNode {
+  type: "TemplateStringPart";
+  value: string;
+}
+
+interface TemplateInterpolation extends BaseNode {
+  type: "TemplateInterpolation";
+  expression: Expression;
+}
+
+interface MemberAccessExpression extends BaseNode {
+  type: "MemberAccessExpression";
+  object: Expression;
+  property: Identifier;
+  computed: boolean;
+}
+
+interface ThisExpression extends BaseNode {
+  type: "ThisExpression";
+}
+
+interface NonNullAssertionExpression extends BaseNode {
+  type: "NonNullAssertionExpression";
+  operand: Expression;
+}
+
+interface Identifier extends BaseNode {
+  type: "Identifier";
+  name: string;
+}
+```
+
+#### Literals
+
+```typescript
+interface StringLiteral extends BaseNode {
+  type: "StringLiteral";
+  value: string;
+  raw: string;
+}
+
+interface IntegerLiteral extends BaseNode {
+  type: "IntegerLiteral";
+  value: number;
+  raw: string;
+}
+
+interface FloatLiteral extends BaseNode {
+  type: "FloatLiteral";
+  value: number;
+  raw: string;
+}
+
+interface BooleanLiteral extends BaseNode {
+  type: "BooleanLiteral";
+  value: boolean;
+  raw: string;
+}
+
+interface NullLiteral extends BaseNode {
+  type: "NullLiteral";
+  raw: string;
+}
+
+interface ListLiteral extends BaseNode {
+  type: "ListLiteral";
+  elements: Expression[];
+}
+```
+
+#### Statements
+
+```typescript
+interface AssignmentStatement extends BaseNode {
+  type: "AssignmentStatement";
+  operator: "=" | "+=" | "-=" | "*=" | "/=" | "%=";
+  left: Expression;
+  right: Expression;
+}
+
+interface ExpressionStatement extends BaseNode {
+  type: "ExpressionStatement";
+  expression: Expression;
+}
+
+interface ReturnStatement extends BaseNode {
+  type: "ReturnStatement";
+  argument?: Expression;
+}
+
+interface BreakStatement extends BaseNode {
+  type: "BreakStatement";
+  label?: string;
+}
+
+interface ContinueStatement extends BaseNode {
+  type: "ContinueStatement";
+  label?: string;
+}
+```
+
+#### Type Expressions
+
+```typescript
+interface TypeReference extends BaseNode {
+  type: "TypeReference";
+  name: Identifier;
+}
+
+interface PrimitiveType extends BaseNode {
+  type: "PrimitiveType";
+  name: string;
+}
+
+interface ArrayType extends BaseNode {
+  type: "ArrayType";
+  elementType: TypeExpression;
+  dimensions: number;
+}
+
+interface OptionalType extends BaseNode {
+  type: "OptionalType";
+  baseType: TypeExpression;
+}
+
+interface UnionType extends BaseNode {
+  type: "UnionType";
+  types: TypeExpression[];
+}
+
+interface FunctionType extends BaseNode {
+  type: "FunctionType";
+  parameters: TypeExpression[];
+  returnType: TypeExpression;
+}
+```
+
+#### Annotations and Metadata
+
+```typescript
+interface Annotation extends BaseNode {
+  type: "Annotation";
+  name: Identifier;
+  arguments: Expression[];
+}
+
+interface Parameter extends BaseNode {
+  type: "Parameter";
+  name: Identifier | MemberAccessExpression;
+  typeRef?: TypeExpression;
+}
+```
+
+#### Specialized Structures
+
+```typescript
+interface MappingBlock extends BaseNode {
+  type: "MappingBlock";
+  entries: MappingEntry[];
+}
+
+interface MappingEntry extends BaseNode {
+  type: "MappingEntry";
+  from: Identifier;
+  to: Identifier;
+}
+```
+
+### Union Types
+
+```typescript
+type Expression =
+  | CallExpression
+  | BinaryExpression
+  | LambdaExpression
+  | IfExpression
+  | InfixCall
+  | RangeExpression
+  | TemplateLiteral
+  | MemberAccessExpression
+  | ThisExpression
+  | NonNullAssertionExpression
+  | Identifier
+  | StringLiteral
+  | IntegerLiteral
+  | FloatLiteral
+  | BooleanLiteral
+  | NullLiteral
+  | ListLiteral;
+
+type Statement =
+  | AssignmentStatement
+  | ExpressionStatement
+  | ReturnStatement
+  | BreakStatement
+  | ContinueStatement
+  | VariableDeclaration
+  | FunctionDeclaration
+  | StructDeclaration
+  | UnionDeclaration
+  | SchemaDeclaration
+  | SchemaDirective
+  | UseStatement;
+
+type TypeExpression =
+  | TypeReference
+  | PrimitiveType
+  | ArrayType
+  | OptionalType
+  | UnionType
+  | FunctionType;
+
+type StructMember =
+  | InitDeclaration
+  | MethodDeclaration
+  | GetterDeclaration
+  | PropertyDeclaration
+  | RepeatedDeclaration;
+```
+
+### AST Usage Examples
+
+#### Simple Variable Declaration
+
+```stria
+val message = "Hello, World!"
+```
+
+Generates:
+
+```typescript
+{
+    type: 'Program',
+    body: [
+        {
+            type: 'VariableDeclaration',
+            kind: 'val',
+            name: {
+                type: 'Identifier',
+                name: 'message'
+            },
+            typeRef: null,
+            value: {
+                type: 'StringLiteral',
+                value: 'Hello, World!',
+                raw: '"Hello, World!"'
+            },
+            annotations: []
+        }
+    ]
+}
+```
+
+#### Function Declaration
+
+```stria
+fun add(a: i32, b: i32): i32 {
+    a + b
+}
+```
+
+Generates:
+
+```typescript
+{
+    type: 'FunctionDeclaration',
+    isInfix: false,
+    receiverType: null,
+    name: {
+        type: 'Identifier',
+        name: 'add'
+    },
+    annotations: [],
+    parameters: [
+        {
+            type: 'Parameter',
+            name: {
+                type: 'Identifier',
+                name: 'a'
+            },
+            typeRef: {
+                type: 'PrimitiveType',
+                name: 'i32'
+            }
+        },
+        {
+            type: 'Parameter',
+            name: {
+                type: 'Identifier',
+                name: 'b'
+            },
+            typeRef: {
+                type: 'PrimitiveType',
+                name: 'i32'
+            }
+        }
+    ],
+    returnType: {
+        type: 'PrimitiveType',
+        name: 'i32'
+    },
+    body: [
+        {
+            type: 'ExpressionStatement',
+            expression: {
+                type: 'BinaryExpression',
+                operator: '+',
+                left: {
+                    type: 'Identifier',
+                    name: 'a'
+                },
+                right: {
+                    type: 'Identifier',
+                    name: 'b'
+                }
+            }
+        }
+    ]
+}
+```
+
+#### Struct Declaration
+
+```stria
+struct Point {
+    x: i32
+    y: i32
+}
+```
+
+Generates:
+
+```typescript
+{
+    type: 'StructDeclaration',
+    name: {
+        type: 'Identifier',
+        name: 'Point'
+    },
+    annotations: [],
+    body: [
+        {
+            type: 'PropertyDeclaration',
+            name: {
+                type: 'Identifier',
+                name: 'x'
+            },
+            annotations: [],
+            isPrivate: false,
+            isOptional: false,
+            typeRef: {
+                type: 'PrimitiveType',
+                name: 'i32'
+            }
+        },
+        {
+            type: 'PropertyDeclaration',
+            name: {
+                type: 'Identifier',
+                name: 'y'
+            },
+            annotations: [],
+            isPrivate: false,
+            isOptional: false,
+            typeRef: {
+                type: 'PrimitiveType',
+                name: 'i32'
+            }
+        }
+    ]
+}
+```
+
+### Implementation Guidelines
+
+#### Parser Implementation
+
+- **Position Tracking**: All nodes must include accurate location information for error reporting and tooling support
+- **Type Safety**: Implement strict type checking during AST construction
+- **Error Recovery**: Provide meaningful error messages with location information
+- **Validation**: Ensure AST structure conforms to language semantics
+
+#### Tool Integration
+
+- **Language Servers**: Use AST for autocompletion, navigation, and refactoring
+- **Code Formatters**: Preserve formatting preferences while maintaining AST structure
+- **Static Analysis**: Traverse AST for linting, type checking, and code quality analysis
+- **Documentation**: Generate API documentation from AST structure
+
+#### Serialization
+
+The AST structure is designed to be easily serializable to JSON or other formats for:
+
+- **Debugging**: Inspecting parser output
+- **Caching**: Storing parsed results for performance
+- **Interoperability**: Sharing AST between different tools
+- **Testing**: Comparing expected vs. actual parse results
 
 ---
 
