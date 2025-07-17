@@ -377,8 +377,33 @@ val complex = if (x > 0) {
 ### Lambda Expressions
 
 ```stria
-val lambda = { x -> x * 2 }
-val multiParam = { x, y -> x + y }
+// Basic lambda expressions
+val double = { x -> x * 2 }
+val add = { x, y -> x + y }
+val greeting = { -> 'Hello, World!' }
+
+// Lambda expressions with explicit return
+val doubleWithReturn = { x -> return x * 2 }
+val addWithReturn = { x, y -> return x + y }
+val greetingWithReturn = { -> return 'Hello, World!' }
+
+// Lambda expressions with no return value
+val doNothing = { -> }
+val emptyLambda = {}
+
+// Type-annotated lambda expressions
+val typedDouble: (i32) -> i32 = { x -> x * 2 }
+val typedAdd: (i32, i32) -> i32 = { x, y -> x + y }
+val typedGreeting: () -> string = { -> 'Hello, World!' }
+
+// Type-annotated lambda expressions with explicit return
+val typedDoubleWithReturn: (i32) -> i32 = { x -> return x * 2 }
+val typedAddWithReturn: (i32, i32) -> i32 = { x, y -> return x + y }
+val typedGreetingWithReturn: () -> string = { -> return 'Hello, World!' }
+
+// Type-annotated lambda expressions with void return
+val typedDoNothing: () -> void = { -> }
+val typedEmptyLambda: () -> void = {}
 ```
 
 ### Anonymous Functions
@@ -513,7 +538,25 @@ struct MainStruct {
 fun add(a: i32, b: i32): i32 {
     a + b
 }
+
+// Function with no return value (void return type is optional)
+fun printMessage(message: string) {
+    // Implementation here
+}
+
+// Explicit void return type (optional)
+fun printMessageExplicit(message: string): void {
+    // Implementation here
+}
 ```
+
+#### Return Types
+
+Functions can have explicit return types or omit them:
+
+- **Explicit return type**: `fun functionName(): ReturnType { ... }`
+- **Omitted return type**: `fun functionName() { ... }` (implicitly returns `void`)
+- **Void return type**: The `: void` annotation is optional for functions that don't return a value
 
 ### Method Declaration
 
