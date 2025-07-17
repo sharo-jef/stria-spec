@@ -20,4 +20,5 @@ The name "Stria" comes from three roots: **Structura** (Latin: Structure), **Via
 > This specification is a work in progress and is subject to change.
 
 Version: none
+
 Date: none
