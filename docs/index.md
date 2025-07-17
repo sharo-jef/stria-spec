@@ -908,7 +908,9 @@ val result = list.map(transform)
 ### Infix Functions
 
 ```stria
-infix fun i32.add(other: i32): i32 = this + other
+infix fun i32.add(other: i32): i32 {
+    this + other
+}
 val result = 5 add 3  // 8
 ```
 
