@@ -105,7 +105,7 @@ struct    init      fun       val       var
 if        else      true      false     null
 this      get       repeated  private   use
 schema    mixin     error     match     when
-as
+as        is
 ```
 
 ### Literals
@@ -182,7 +182,8 @@ val mixed = [1, 'two', true]
 #### Collection Types
 
 - `List<T>`: Ordered collection of elements
-- `Range<T>`: Range of values (e.g., `1..10`)
+- `I32Range`: Range of i32 values with exclusive upper bound (e.g., `1..10`)
+- `F64Range`: Range of f64 values with exclusive upper bound (e.g., `1.0..10.0`)
 
 #### Optional Types
 
@@ -297,22 +298,23 @@ val notNull = nullable!  // Asserts non-null
 ### Range Operators
 
 ```stria
-val range = 1..10           // Range from 1 to 10
+val range = 1..10           // Range from 1 to 10 (exclusive upper bound)
+val inclusiveRange = 1..=10 // Range from 1 to 10 (inclusive)
 val rangeWithStep = 1..10 step 2  // 1, 3, 5, 7, 9
 ```
 
 #### Range Types
 
-Range expressions are interpreted as `RangeExpression` at compile time and handled as `IntRange` or `FloatRange` at runtime:
+Range expressions are interpreted as `RangeExpression` at compile time and handled as `I32Range` or `F64Range` at runtime:
 
 ```stria
-struct IntRange {
+struct I32Range {
     from: i32
     to: i32
     step: i32 = 1
 }
 
-struct FloatRange {
+struct F64Range {
     from: f64
     to: f64
     step: f64 = 1.0
@@ -324,10 +326,10 @@ struct FloatRange {
 Range types support the following infix functions:
 
 ```stria
-// Step function for IntRange
-infix fun IntRange.step(step: i32): IntRange {
+// Step function for I32Range
+infix fun I32Range.step(step: i32): I32Range {
     val {from, to} = this
-    IntRange {
+    I32Range {
         this.from = from
         this.to = to
         this.step = if (step == 0) {
@@ -340,11 +342,20 @@ infix fun IntRange.step(step: i32): IntRange {
     }
 }
 
+// Contains function for I32Range
+infix fun i32.in(range: I32Range): bool {
+    if (range.step > 0) {
+        this >= range.from && this <= range.to && ((this - range.from) % range.step == 0)
+    } else {
+        this <= range.from && this >= range.to && ((range.from - this) % (-range.step) == 0)
+    }
+}
+
 // Until function for integers (exclusive upper bound)
-infix fun i32.until(to: i32): IntRange {
+infix fun i32.until(to: i32): I32Range {
     if (to == this) error('to must not be equal to from')
     if (to < this) error('to must be greater than from')
-    IntRange {
+    I32Range {
         from = this
         this.to = to - 1
         step = 1
@@ -352,20 +363,20 @@ infix fun i32.until(to: i32): IntRange {
 }
 
 // Down to function for integers (descending range)
-infix fun i32.downTo(to: i32): IntRange {
+infix fun i32.downTo(to: i32): I32Range {
     if (to == this) error('to must not be equal to from')
     if (to > this) error('to must be less than from')
-    IntRange {
+    I32Range {
         from = this
         this.to = to
         step = -1
     }
 }
 
-// Step function for FloatRange
-infix fun FloatRange.step(step: f64): FloatRange {
+// Step function for F64Range
+infix fun F64Range.step(step: f64): F64Range {
     val {from, to} = this
-    FloatRange {
+    F64Range {
         this.from = from
         this.to = to
         this.step = if (step == 0) {
@@ -378,11 +389,20 @@ infix fun FloatRange.step(step: f64): FloatRange {
     }
 }
 
+// Contains function for F64Range
+infix fun f64.in(range: F64Range): bool {
+    if (range.step > 0) {
+        this >= range.from && this <= range.to && ((this - range.from) % range.step == 0)
+    } else {
+        this <= range.from && this >= range.to && ((range.from - this) % (-range.step) == 0)
+    }
+}
+
 // Until function for floats (exclusive upper bound)
-infix fun f64.until(to: f64): FloatRange {
+infix fun f64.until(to: f64): F64Range {
     if (to == this) error('to must not be equal to from')
     if (to < this) error('to must be greater than from')
-    FloatRange {
+    F64Range {
         from = this
         this.to = to - 1.0
         step = 1.0
@@ -390,10 +410,10 @@ infix fun f64.until(to: f64): FloatRange {
 }
 
 // Down to function for floats (descending range)
-infix fun f64.downTo(to: f64): FloatRange {
+infix fun f64.downTo(to: f64): F64Range {
     if (to == this) error('to must not be equal to from')
     if (to > this) error('to must be less than from')
-    FloatRange {
+    F64Range {
         from = this
         this.to = to
         step = -1.0
@@ -405,8 +425,9 @@ infix fun f64.downTo(to: f64): FloatRange {
 
 ```stria
 // Basic ranges
-val numbers = 1..10          // IntRange from 1 to 10
-val floats = 1.0..10.0       // FloatRange from 1.0 to 10.0
+val numbers = 1..10          // I32Range from 1 to 10 (exclusive upper bound)
+val floats = 1.0..10.0       // F64Range from 1.0 to 10.0 (exclusive upper bound)
+val inclusive = 1..=10       // I32Range from 1 to 10 (inclusive)
 
 // Range with step
 val evens = 2..20 step 2     // 2, 4, 6, 8, 10, 12, 14, 16, 18, 20
@@ -417,6 +438,19 @@ val lessThan10 = 1 until 10  // 1, 2, 3, 4, 5, 6, 7, 8, 9
 
 // Descending ranges
 val countdown = 10 downTo 1  // 10, 9, 8, 7, 6, 5, 4, 3, 2, 1
+
+// Range membership testing
+val inRange = 5 in 1..10     // false (10 is not included in 1..10)
+val inInclusiveRange = 5 in 1..=10 // true (10 is included in 1..=10)
+val notInRange = 15 in 1..10 // false
+val inSteppedRange = 6 in (2..20 step 2)  // true (6 is even)
+val notInSteppedRange = 7 in (2..20 step 2)  // false (7 is not even)
+
+// Float range membership testing with step
+val inFloatRange = 4.0 in (2.0..20.0 step 2.0)  // true (4.0 is in the sequence)
+val notInFloatRange = 3.0 in (2.0..20.0 step 2.0)  // false (3.0 is not in the sequence)
+val inFloatSteppedRange = 2.5 in (1.0..5.0 step 0.5)  // true (2.5 is in the sequence)
+val notInFloatSteppedRange = 2.3 in (1.0..5.0 step 0.5)  // false (2.3 is not in the sequence)
 ```
 
 ### Spread Operator
@@ -523,6 +557,94 @@ val typedGreetingWithReturn: () -> string = { -> return 'Hello, World!' }
 val typedDoNothing: () -> void = { -> }
 val typedEmptyLambda: () -> void = {}
 ```
+
+### Match Expressions
+
+Match expressions provide pattern matching capabilities with type checking:
+
+```stria
+val result = match value {
+    is string -> "String value"
+    is i32 -> "Integer value"
+    is bool -> "Boolean value"
+    else -> "Other type"
+}
+```
+
+#### Pattern Matching with Values
+
+```stria
+val status = match response.code {
+    200 -> "OK"
+    404 -> "Not Found"
+    500 -> "Internal Server Error"
+    else -> "Unknown Status"
+}
+```
+
+#### Pattern Matching with Type Guards
+
+```stria
+union Value = string | i32 | bool
+
+val description = match value {
+    is string -> `String: ${value}`
+    is i32 -> `Integer: ${value}`
+    is bool -> `Boolean: ${value}`
+}
+```
+
+The `is` operator performs runtime type checking and type narrowing:
+
+- **Type Checking**: Returns `true` if the value is of the specified type
+- **Type Narrowing**: Within the matching branch, the value is automatically cast to the checked type
+- **Union Type Support**: Works with union types to discriminate between different type variants
+- **Exhaustiveness**: When used with union types, the compiler ensures all possible types are handled
+
+```stria
+// Type checking examples
+val isString = value is string     // Runtime type check
+val isNumber = value is i32        // Returns true for i32 values
+val isOptional = value is string?  // Checks for optional string type
+
+// Type narrowing in conditionals
+if (value is string) {
+    // Within this block, 'value' is automatically treated as string
+    val length = value.length()
+}
+```
+
+#### Pattern Matching with Ranges
+
+```stria
+val category = match age {
+    0..12 -> "Child"
+    13..19 -> "Teen"
+    20..64 -> "Adult"
+    65..150 -> "Senior"
+    else -> "Invalid age"
+}
+
+val grade = match score {
+    90..100 -> "A"
+    80..89 -> "B"
+    70..79 -> "C"
+    60..69 -> "D"
+    0..59 -> "F"
+    else -> "Invalid score"
+}
+```
+
+Range patterns in match expressions are evaluated using the `in` operator internally. For example, `0..12` is equivalent to `score in 0..12`.
+
+#### Match Expression Rules
+
+- Match expressions must be exhaustive (cover all possible cases)
+- The `else` clause can be used as a catch-all
+- Each branch must return the same type
+- Patterns are evaluated in order from top to bottom
+- The first matching pattern is executed
+- Range patterns are evaluated using the `in` operator internally
 
 ### Anonymous Functions
 
@@ -1850,16 +1972,6 @@ struct Config {
 type Port = u16(min: 1, max: 65535)
 type Email = string(format: 'email')
 type Password = string(minLength: 8, maxLength: 64)
-```
-
-#### Match Expressions
-
-```stria
-val result = match value {
-    is string -> "String value"
-    is i32 -> "Integer value"
-    else -> "Other type"
-}
 ```
 
 #### Label and Break/Continue
