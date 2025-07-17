@@ -232,6 +232,47 @@ val empty: List<i32> = []                // Empty list with explicit type
 - `f64`: 64-bit IEEE 754 floating-point number
 - `bool`: Boolean values (`true` or `false`)
 
+#### Implementation Requirements
+
+**Platform-Independent Types**
+All numeric types must be implemented consistently across all platforms and execution environments. The language specification defines exact bit widths and value ranges that must be preserved regardless of the underlying hardware or runtime environment.
+
+**Emulation Requirement**
+If the target platform or runtime environment does not natively support a specific data type (e.g., `i64` on a 32-bit system, or `f32` on a platform with only double-precision floating-point), the implementation must provide complete emulation to ensure:
+
+- Exact bit width and precision as specified
+- Identical value ranges across all platforms
+- Consistent arithmetic behavior and overflow handling
+- Deterministic results for all operations
+
+**Accuracy Over Performance**
+As a configuration description language, Stria prioritizes correctness and consistency over execution speed. Implementations should:
+
+- Use arbitrary precision arithmetic if necessary to ensure accuracy
+- Implement proper rounding and precision handling for floating-point operations
+- Ensure deterministic behavior for all numeric operations
+- Provide exact emulation even if it results in slower execution
+
+**Cross-Platform Consistency**
+The same Stria configuration must produce identical results on all supported platforms:
+
+- Integer overflow behavior must be consistent (wrap-around for unsigned, two's complement for signed)
+- Floating-point operations must follow IEEE 754 standards precisely
+- String encoding and representation must be uniform
+- Boolean values must have identical truth semantics
+
+**Examples of Required Consistency**
+
+```stria
+// These operations must produce identical results on all platforms:
+val maxU64 = 18446744073709551615u64    // Must be exactly this value
+val overflow = 255u8 + 1u8              // Must wrap to 0u8
+val precision = 1.0f32 / 3.0f32         // Must have consistent precision
+val bigInt = 9223372036854775807i64     // Must not depend on native int size
+```
+
+This ensures that configuration files are truly portable and produce consistent deployment artifacts regardless of the build environment.
+
 #### Collection Types
 
 - `List<T>`: Immutable ordered collection of elements
