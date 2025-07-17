@@ -749,6 +749,77 @@ val container = Container {
 }
 ```
 
+#### Repeated Properties with Constructor Selection
+
+The `repeated` keyword supports constructor selection based on property names, allowing different constructors to be called for each named invocation:
+
+```stria
+struct Pipeline {
+    repeated steps: Step[] {
+        build -> BuildStep
+        test -> TestStep
+    }
+}
+
+union Step = BuildStep | TestStep
+
+struct BuildStep {
+    command: string
+}
+
+struct TestStep {
+    script: string
+}
+
+val pipeline = Pipeline {
+    build {
+        command = "go build"
+    }
+    test {
+        script = "go test"
+    }
+}
+```
+
+#### Repeated Properties Syntax
+
+- **Basic repeated property**: `repeated propertyName: Type[] = []`
+- **Constructor selection**: `repeated propertyName: Type[] { name1 -> Constructor1, name2 -> Constructor2 }`
+- **Property access**: Each named constructor call adds an instance to the array
+
+#### Multiple Calls to Same Constructor
+
+```stria
+struct TestSuite {
+    repeated tests: Test[] {
+        unit -> UnitTest
+        integration -> IntegrationTest
+    }
+}
+
+struct UnitTest {
+    name: string
+}
+
+struct IntegrationTest {
+    name: string
+    timeout: u32
+}
+
+val suite = TestSuite {
+    unit {
+        name = "test_user_creation"
+    }
+    unit {
+        name = "test_user_validation"
+    }
+    integration {
+        name = "test_api_flow"
+        timeout = 30
+    }
+}
+```
+
 ### Mixin Support
 
 ```stria
