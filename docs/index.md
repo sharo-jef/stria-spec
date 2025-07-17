@@ -918,28 +918,70 @@ val result = 5 add 3  // 8
 
 ## Annotations
 
+### Annotation Syntax
+
+Annotations can be applied to structs, properties, and getters. The syntax supports optional parentheses for arguments:
+
+```stria
+@annotation              // No arguments
+@annotation()            // No arguments (explicit)
+@annotation 'value'      // Single argument
+@annotation('value')     // Single argument (explicit)
+@annotation('a', 'b')    // Multiple arguments (parentheses required)
+```
+
 ### Built-in Annotations
 
 #### @description
 
+Provides documentation strings for IDE hover tooltips and automatic documentation generation.
+
 ```stria
-@description 'User configuration'
+@description 'User configuration structure'
 struct User {
-    @description 'The user name'
+    @description 'The user name (required)'
     name: string
+
+    @description 'The user age in years'
+    age: u8
+
+    @description 'Optional email address for notifications'
+    email?: string
 }
 ```
 
+**Usage:**
+
+- IDE hover tooltips display the description text
+- Documentation generators use this for API documentation
+- Can be applied to structs, properties, and getters
+
 #### @name
+
+Specifies the name to use when serializing to JSON or other formats. This allows Stria property names to differ from their serialized representation.
 
 ```stria
 struct Config {
     @name 'database_url'
     databaseUrl: string
+
+    @name 'api_key'
+    apiKey: string
+
+    @name 'max_connections'
+    maxConnections: u32
 }
 ```
 
+**Usage:**
+
+- Controls JSON property names during serialization
+- Enables camelCase Stria properties with snake_case JSON output
+- Useful for maintaining compatibility with existing APIs
+
 #### @deprecated
+
+Marks structs or properties as deprecated, providing migration guidance for IDE warnings.
 
 ```stria
 struct LegacyConfig {
@@ -948,31 +990,153 @@ struct LegacyConfig {
 
     newField: string
 }
+
+@deprecated 'Use ModernConfig instead'
+struct OldConfig {
+    value: string
+}
 ```
+
+**Usage:**
+
+- IDE shows deprecation warnings with the provided message
+- Helps guide users to updated APIs
+- Can be applied to structs, properties, and getters
 
 #### @serialize
 
+Controls how objects are serialized by specifying which getter to use for the serialized value.
+
+##### On Getters
+
+When applied to a getter, the getter's return value at program completion becomes the serialized value:
+
 ```stria
 struct Version {
-    @serialize 'toString'
+    major: u16
+    minor: u16
+    patch: u16
+
+    @serialize
     get toString(): string {
         `${major}.${minor}.${patch}`
     }
-
-    major: int
-    minor: int
-    patch: int
 }
 ```
+
+**Example:**
+
+```stria
+// schema.stria
+schema {
+    AppConfig
+}
+
+struct AppConfig {
+    version: Version
+}
+
+struct Version {
+    major: u16
+    minor: u16
+    patch: u16
+
+    @serialize
+    get toString(): string {
+        `${major}.${minor}.${patch}`
+    }
+}
+
+// config.stria
+#schema "./schema.stria"
+AppConfig {
+    version = Version {
+        major = 1
+        minor = 2
+        patch = 3
+    }
+}
+```
+
+**Serialized output:**
+
+```json
+{
+  "AppConfig": {
+    "version": "1.2.3"
+  }
+}
+```
+
+##### On Structs
+
+When applied to a struct, specify which getter to use for serialization:
+
+```stria
+@serialize 'toString'
+struct Version {
+    major: u16
+    minor: u16
+    patch: u16
+
+    get toString(): string {
+        `${major}.${minor}.${patch}`
+    }
+}
+```
+
+**Usage:**
+
+- Transforms complex objects into simple serialized values
+- Getter is evaluated at program completion
+- Useful for computed values and string representations
 
 #### @flatten
 
+Flattens nested structures during JSON serialization, bringing child properties up to the parent level.
+
 ```stria
-struct NestedConfig {
+struct DatabaseConfig {
+    host: string
+    port: u16
+    username: string
+}
+
+struct AppConfig {
     @flatten
     database: DatabaseConfig
+
+    appName: string
 }
 ```
+
+**Example:**
+
+```stria
+// Without @flatten, would serialize as:
+{
+    "database": {
+        "host": "localhost",
+        "port": 5432,
+        "username": "admin"
+    },
+    "appName": "MyApp"
+}
+
+// With @flatten, serializes as:
+{
+    "host": "localhost",
+    "port": 5432,
+    "username": "admin",
+    "appName": "MyApp"
+}
+```
+
+**Usage:**
+
+- Reduces nesting in serialized output
+- Useful for configuration flattening
+- Can be applied to struct properties
 
 ---
 
