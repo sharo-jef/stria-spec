@@ -309,15 +309,6 @@ val list2 = [4, 5, 6]
 val combined = [...list1, ...list2]  // [1, 2, 3, 4, 5, 6]
 ```
 
-### Pipeline Operator
-
-```stria
-val result = value
-    |> transform1
-    |> transform2
-    |> finalTransform
-```
-
 ### Type Cast Operators
 
 Stria supports explicit type casting using the `as` keyword:
