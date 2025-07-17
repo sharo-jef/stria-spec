@@ -1,7 +1,7 @@
 # Stria Language Specification
 
-**Version:** 1.0  
-**Date:** January 2025
+Version: none
+Date: none
 
 ## Table of Contents
 
