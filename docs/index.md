@@ -1144,6 +1144,8 @@ struct AppConfig {
 
 ### Schema Declaration
 
+Schema files define the structure and validation rules using the `schema` declaration. These files cannot contain configuration data or use the `#schema` directive:
+
 ```stria
 schema {
     AppConfig
@@ -1154,7 +1156,7 @@ schema {
 
 ### Schema Reference
 
-Configuration files reference schemas using the `#schema` directive:
+Configuration files reference schemas using the `#schema` directive. These files cannot contain schema declarations:
 
 ```stria
 #schema './schema.stria'
@@ -1166,6 +1168,23 @@ AppConfig {
     }
 }
 ```
+
+### File Type Restrictions
+
+Both schema files and configuration files use the `.stria` extension, but they serve different purposes with mutual exclusivity:
+
+- **Schema Files**:
+
+  - Must contain a `schema` declaration
+  - Cannot use the `#schema` directive
+  - Cannot contain configuration data
+  - Define struct types and validation rules
+
+- **Configuration Files**:
+  - Must use the `#schema` directive to reference a schema
+  - Cannot contain `schema` declarations
+  - Contain the actual configuration data
+  - Must instantiate structs defined in the referenced schema
 
 ### Schema Validation
 
