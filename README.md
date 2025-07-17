@@ -12,7 +12,7 @@ The name "Stria" comes from three roots: **Structura** (Latin: Structure), **Via
 
 ## Repository Contents
 
-📖 **[Language Specification](docs/index.md)** - Complete Stria language specification
+📖 **[Language Specification](https://sharo-jef.github.io/stria-spec/)** - Complete Stria language specification
 
 ## Specification Version
 
