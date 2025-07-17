@@ -751,6 +751,30 @@ val spread = [...list, 100, ...other] // [10, 20, 2, 3, 4, 5, 6, 100, 7, 8, 9]
 
 ## Statements and Control Flow
 
+### Statement Separators
+
+Stria uses newlines as the primary statement separator, but semicolons (`;`) can be used to write multiple statements on a single line:
+
+```stria
+// Standard single-statement-per-line format
+val x = 10
+val y = 20
+val result = x + y
+
+// Multiple statements on one line using semicolons
+val x = 10; val y = 20; val result = x + y
+
+// Mixed format (discouraged for readability)
+val x = 10; val y = 20
+val result = x + y
+```
+
+**Usage Guidelines:**
+
+- Use semicolons only when you need to write multiple statements on the same line
+- Prefer newlines for better readability in most cases
+- Semicolons are optional at the end of lines (newlines are sufficient)
+
 ### Variable Declarations
 
 ```stria
@@ -1405,6 +1429,66 @@ Functions can have explicit return types or omit them:
 - **Explicit return type**: `fun functionName(): ReturnType { ... }`
 - **Omitted return type**: `fun functionName() { ... }` (implicitly returns `void`)
 - **Void return type**: The `: void` annotation is optional for functions that don't return a value
+
+#### Function Return Behavior
+
+**Implicit Return Values**
+Functions in Stria follow an expression-oriented approach where the last expression in a function body becomes the return value:
+
+```stria
+fun calculateSum(a: i32, b: i32): i32 {
+    val intermediate = a * 2
+    val result = intermediate + b
+    result  // This expression becomes the return value
+}
+
+fun getGreeting(name: string): string {
+    val prefix = "Hello, "
+    prefix + name  // This expression becomes the return value
+}
+```
+
+**Explicit Return Statements**
+Functions can use explicit `return` statements to return values early or for clarity:
+
+```stria
+fun findMax(a: i32, b: i32): i32 {
+    if (a > b) return a
+    return b
+}
+
+fun processValue(value: i32): string {
+    if (value < 0) return "negative"
+    if (value == 0) return "zero"
+    return "positive"
+}
+```
+
+**Void Return Functions**
+Functions that return `void` (or have no explicit return type) ignore the value of the final expression:
+
+```stria
+fun printInfo(message: string): void {
+    // Implementation here
+    42  // This value is ignored - function returns void
+}
+
+fun logMessage(message: string) {  // Implicit void return
+    // Implementation here
+    "some string"  // This value is ignored - function returns void
+}
+```
+
+**Mixed Return Patterns**
+Functions can mix explicit returns with implicit returns:
+
+```stria
+fun processNumber(value: i32): string {
+    if (value < 0) return "negative"  // Explicit return
+    if (value == 0) return "zero"     // Explicit return
+    "positive"  // Implicit return (last expression)
+}
+```
 
 ### Method Declaration
 
