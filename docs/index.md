@@ -75,21 +75,26 @@ Stria is designed as a **configuration description language** that compiles to s
 **Compilation Target**
 
 ```stria
-// Stria configuration:
-struct ServerConfig {
-    fun host(value: string) { this.host = value }
-    fun port(value: u16) { this.port = value }
-    fun ssl(enabled: bool) { this.ssl = enabled }
+// schema.stria
+schema {
+    conf: ServerConfig
+}
 
+struct ServerConfig {
     host: string
     port: u16
     ssl: bool
 }
+```
 
-val config = ServerConfig {
-    host("api.example.com")
-    port(443)
-    ssl(true)
+```stria
+// config.stria
+#schema './schema.stria'
+
+conf {
+    host = "api.example.com"
+    port = 443
+    ssl = true
 }
 ```
 
@@ -1476,6 +1481,58 @@ struct Person {
 }
 ```
 
+### Member Name Constraints
+
+**Same-Name Member Prohibition**
+Structs cannot have properties and methods with the same name. This constraint ensures clarity and prevents ambiguity in member access:
+
+```stria
+struct Example {
+    // Valid: Different names for property and method
+    value: i32
+
+    fun getValue(): i32 {
+        value
+    }
+
+    fun setValue(newValue: i32) {
+        value = newValue
+    }
+}
+
+struct Invalid {
+    value: i32
+
+    // Error: Cannot define method with same name as property
+    fun value(newValue: i32) {
+        this.value = newValue
+    }
+}
+```
+
+**Design Rationale**
+This constraint serves several purposes:
+
+1. **Clarity**: Prevents confusion between property access and method calls
+2. **Schema Validation**: Ensures clean mapping to configuration formats (JSON, YAML, TOML)
+3. **Type Safety**: Eliminates ambiguity in member resolution
+4. **Configuration Consistency**: Maintains predictable structure in configuration files
+
+**Alternative Patterns**
+Instead of same-name members, use descriptive method names:
+
+```stria
+struct ServerConfig {
+    host: string
+    port: u16
+
+    // Good: Descriptive method names
+    fun setHost(value: string) { host = value }
+    fun setPort(value: u16) { port = value }
+    fun getEndpoint(): string { `${host}:${port}` }
+}
+```
+
 ### Property Assignment Requirements
 
 As a configuration description language, Stria has unique property assignment requirements that differ from typical programming languages:
@@ -2091,25 +2148,34 @@ val config = Config {
 Since Stria compiles to simple data formats like JSON, the single-call constraint ensures that configuration properties have exactly one value:
 
 ```stria
-// Stria configuration:
+// schema.stria
+schema {
+    config: ServerConfig
+}
+
 struct ServerConfig {
-    fun host(value: string) { this.host = value }
-    fun port(value: u16) { this.port = value }
     host: string
     port: u16
 }
+```
 
-val config = ServerConfig {
-    host("localhost")
-    port(8080)
-    // host("example.com") // Prevented - would cause ambiguity in final JSON
+```stria
+// config.stria
+#schema './schema.stria'
+
+config {
+    host = "localhost"
+    port = 8080
+    // host = "example.com" // Prevented - would cause ambiguity in final JSON
 }
+```
 
+```json
 // Compiles to clean JSON:
-// {
-//   "host": "localhost",
-//   "port": 8080
-// }
+{
+  "host": "localhost",
+  "port": 8080
+}
 ```
 
 **3. Deterministic Configuration Evaluation**
@@ -2124,14 +2190,23 @@ Without the single-call constraint, configuration would become ambiguous:
 
 ```stria
 // Problematic scenario without single-call constraint:
-struct DatabaseConfig {
-    fun timeout(seconds: u32) { this.timeout = seconds }
-    timeout: u32
+// schema.stria
+schema {
+    config: DatabaseConfig
 }
 
-val config = DatabaseConfig {
-    timeout(30)   // Should this be the final value?
-    timeout(60)   // Or should this override the previous one?
+struct DatabaseConfig {
+    timeout: u32
+}
+```
+
+```stria
+// config.stria - This would be problematic without single-call constraint
+#schema './schema.stria'
+
+config {
+    timeout = 30   // Should this be the final value?
+    timeout = 60   // Or should this override the previous one?
 }
 
 // Resulting JSON would be ambiguous:
