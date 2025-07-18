@@ -331,13 +331,22 @@ This ensures that configuration files are truly portable and produce consistent 
 
 #### Collection Types
 
+**Note on Type Signatures**: While Stria does not have type signatures in user code, built-in types like `List<T>` and `Range<T>` are documented with generic type parameters to explain their behavior. These type parameters exist only in the compiler's type system and documentation, not in user syntax.
+
 - `List<T>`: Immutable ordered collection of elements
-- `I32Range`: Range of i32 values with exclusive upper bound (e.g., `1..10`)
-- `F64Range`: Range of f64 values with exclusive upper bound (e.g., `1.0..10.0`)
+- `Range<T>`: Range of values with exclusive upper bound (e.g., `1..10` for integers, `1.0..10.0` for floats)
 
-##### List<T> Type
+##### List Type
 
-The `List<T>` type represents an ordered collection of elements of type `T`. For configuration management convenience, lists are **mutable during construction** and become **immutable after execution completes**. List literals are created using square bracket notation:
+The `List` type represents an ordered collection of elements. For configuration management convenience, lists are **mutable during construction** and become **immutable after execution completes**.
+
+**List Initialization**: Lists can only be initialized using literal syntax:
+
+- Array literals: `[1, 2, 3]`
+- Spread syntax: `[...a, ...b]`
+- Empty lists: `[]`
+
+**Type Notation**: In documentation and type contexts, list types are written as `T[]` (e.g., `string[]`, `i32[]`).
 
 ```stria
 val numbers: List<i32> = [1, 2, 3, 4, 5]
@@ -673,31 +682,33 @@ val rangeWithStep = 1..10 step 2  // 1, 3, 5, 7, 9
 
 #### Range Types
 
-Range expressions are interpreted as `RangeExpression` at compile time and handled as `I32Range` or `F64Range` at runtime:
+Range expressions are interpreted as `RangeExpression` at compile time and handled as `Range<T>` at runtime:
 
 ```stria
-struct I32Range {
+struct Range<i32> {
     from: i32
     to: i32
     step: i32 = 1
 }
 
-struct F64Range {
+struct Range<f64> {
     from: f64
     to: f64
     step: f64 = 1.0
 }
 ```
 
+**Note**: The `Range<T>` type signature is used here for documentation purposes only. In actual Stria code, users interact with ranges through syntax like `1..10`, `1..=10`, `1 until 10`, and `1..10 step 2`.
+
 #### Range Methods
 
 Range types support the following infix functions:
 
 ```stria
-// Step function for I32Range
-infix fun I32Range.step(step: i32): I32Range {
+// Step function for Range<i32>
+infix fun Range<i32>.step(step: i32): Range<i32> {
     val {from, to} = this
-    I32Range {
+    Range<i32> {
         this.from = from
         this.to = to
         this.step = if (step == 0) {
@@ -710,8 +721,8 @@ infix fun I32Range.step(step: i32): I32Range {
     }
 }
 
-// Contains function for I32Range
-infix fun i32.in(range: I32Range): bool {
+// Contains function for Range<i32>
+infix fun i32.in(range: Range<i32>): bool {
     if (range.step > 0) {
         this >= range.from && this <= range.to && ((this - range.from) % range.step == 0)
     } else {
@@ -720,10 +731,10 @@ infix fun i32.in(range: I32Range): bool {
 }
 
 // Until function for integers (exclusive upper bound)
-infix fun i32.until(to: i32): I32Range {
+infix fun i32.until(to: i32): Range<i32> {
     if (to == this) error('to must not be equal to from')
     if (to < this) error('to must be greater than from')
-    I32Range {
+    Range<i32> {
         from = this
         this.to = to - 1
         step = 1
@@ -731,20 +742,20 @@ infix fun i32.until(to: i32): I32Range {
 }
 
 // Down to function for integers (descending range)
-infix fun i32.downTo(to: i32): I32Range {
+infix fun i32.downTo(to: i32): Range<i32> {
     if (to == this) error('to must not be equal to from')
     if (to > this) error('to must be less than from')
-    I32Range {
+    Range<i32> {
         from = this
         this.to = to
         step = -1
     }
 }
 
-// Step function for F64Range
-infix fun F64Range.step(step: f64): F64Range {
+// Step function for Range<f64>
+infix fun Range<f64>.step(step: f64): Range<f64> {
     val {from, to} = this
-    F64Range {
+    Range<f64> {
         this.from = from
         this.to = to
         this.step = if (step == 0) {
@@ -757,8 +768,8 @@ infix fun F64Range.step(step: f64): F64Range {
     }
 }
 
-// Contains function for F64Range
-infix fun f64.in(range: F64Range): bool {
+// Contains function for Range<f64>
+infix fun f64.in(range: Range<f64>): bool {
     if (range.step > 0) {
         this >= range.from && this <= range.to && ((this - range.from) % range.step == 0)
     } else {
@@ -767,10 +778,10 @@ infix fun f64.in(range: F64Range): bool {
 }
 
 // Until function for floats (exclusive upper bound)
-infix fun f64.until(to: f64): F64Range {
+infix fun f64.until(to: f64): Range<f64> {
     if (to == this) error('to must not be equal to from')
     if (to < this) error('to must be greater than from')
-    F64Range {
+    Range<f64> {
         from = this
         this.to = to
         step = 1.0
@@ -778,10 +789,10 @@ infix fun f64.until(to: f64): F64Range {
 }
 
 // Down to function for floats (descending range)
-infix fun f64.downTo(to: f64): F64Range {
+infix fun f64.downTo(to: f64): Range<f64> {
     if (to == this) error('to must not be equal to from')
     if (to > this) error('to must be less than from')
-    F64Range {
+    Range<f64> {
         from = this
         this.to = to
         step = -1.0
@@ -793,9 +804,9 @@ infix fun f64.downTo(to: f64): F64Range {
 
 ```stria
 // Basic ranges
-val numbers = 1..10          // I32Range from 1 to 10 (exclusive upper bound)
-val floats = 1.0..10.0       // F64Range from 1.0 to 10.0 (exclusive upper bound)
-val inclusive = 1..=10       // I32Range from 1 to 10 (inclusive)
+val numbers = 1..10          // Range<i32> from 1 to 10 (exclusive upper bound)
+val floats = 1.0..10.0       // Range<f64> from 1.0 to 10.0 (exclusive upper bound)
+val inclusive = 1..=10       // Range<i32> from 1 to 10 (inclusive)
 
 // Range with step
 val evens = 2..20 step 2     // 2, 4, 6, 8, 10, 12, 14, 16, 18, 20
