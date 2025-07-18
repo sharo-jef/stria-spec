@@ -1,8 +1,7 @@
 # Stria Language Specification
 
-Version: none
-
-Date: none
+- Version: none
+- Date: none
 
 ## Table of Contents
 

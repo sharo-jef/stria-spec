@@ -59,6 +59,5 @@ Community feedback is essential:
 > [!Note]
 > This specification is a work in progress and is subject to change.
 
-Version: none
-
-Date: none
+- Version: none
+- Date: none
