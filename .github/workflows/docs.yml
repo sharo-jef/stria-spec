@@ -17,10 +17,16 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: read
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -133,4 +139,4 @@ jobs:
           git config --local user.name "GitHub Action"
           git add proposals/README.md
           git commit -m "docs: update proposal index" || exit 0
-          git push
+          git push origin HEAD:${{ github.ref_name }}
