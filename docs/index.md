@@ -77,7 +77,7 @@ Stria is designed as a **configuration description language** that compiles to s
 
 ```stria
 // schema.stria
-schema {
+schema struct {
     conf: ServerConfig
 }
 
@@ -2602,15 +2602,91 @@ struct AppConfig {
 
 ### Schema Declaration
 
-Schema files define the structure and validation rules using the `schema` declaration. These files cannot contain configuration data or use the `#schema` directive:
+Schema files define the structure and validation rules using the `schema` declaration. The `schema` keyword is used as a prefix for struct definitions, making schema definitions more consistent with regular struct syntax.
+
+#### Schema Struct Syntax
+
+There are three equivalent ways to define a schema struct:
+
+**Full syntax with name:**
 
 ```stria
-schema {
-    AppConfig
-    DatabaseConfig
-    ServerConfig
+// schema.stria
+schema struct AppConfig {
+    database: DatabaseConfig
+    server: ServerConfig
+}
+
+struct DatabaseConfig {
+    host: string
+    port: u16
+}
+
+struct ServerConfig {
+    host: string
+    port: u16
+    ssl: bool
 }
 ```
+
+**Abbreviated form 1 (struct name omitted):**
+
+```stria
+// schema.stria
+schema struct {
+    database: DatabaseConfig
+    server: ServerConfig
+}
+
+struct DatabaseConfig {
+    host: string
+    port: u16
+}
+
+struct ServerConfig {
+    host: string
+    port: u16
+    ssl: bool
+}
+```
+
+**Abbreviated form 2 (struct keyword omitted):**
+
+```stria
+// schema.stria
+schema {
+    database: DatabaseConfig
+    server: ServerConfig
+}
+
+struct DatabaseConfig {
+    host: string
+    port: u16
+}
+
+struct ServerConfig {
+    host: string
+    port: u16
+    ssl: bool
+}
+```
+
+#### Schema Semantics
+
+- `schema struct Name {}` defines a schema with an optional name for documentation purposes
+- `schema struct {}` defines a schema with the name omitted
+- `schema {}` defines a schema with both the name and `struct` keyword omitted
+- All three forms have identical semantics and behavior
+- The schema struct is implicitly instantiated as a singleton when referenced by the `#schema` directive
+- Only one struct definition with the `schema` keyword can be placed in a file
+
+#### Schema Integration
+
+The new schema definition syntax integrates seamlessly with existing Stria features:
+
+- Schema structs can be used alongside regular struct definitions
+- Schema structs support all existing validation features
+- Schema structs follow the same grammar rules as regular structs
 
 ### Schema Reference
 
@@ -2619,11 +2695,15 @@ Configuration files reference schemas using the `#schema` directive. These files
 ```stria
 #schema './schema.stria'
 
-AppConfig {
-    database = DatabaseConfig {
-        host = 'localhost'
-        port = 5432
-    }
+database {
+    host = 'localhost'
+    port = 5432
+}
+
+server {
+    host = 'api.example.com'
+    port = 443
+    ssl = true
 }
 ```
 
@@ -2633,16 +2713,18 @@ Both schema files and configuration files use the `.stria` extension, but they s
 
 - **Schema Files**:
 
-  - Must contain a `schema` declaration
+  - Must contain exactly one `schema struct` declaration (in any of the three forms)
   - Cannot use the `#schema` directive
   - Cannot contain configuration data
   - Define struct types and validation rules
+  - Can contain additional struct definitions referenced by the schema
 
 - **Configuration Files**:
   - Must use the `#schema` directive to reference a schema
   - Cannot contain `schema` declarations
   - Contain the actual configuration data
   - Must instantiate structs defined in the referenced schema
+  - Top-level instantiation follows the definitions within the schema struct
 
 ### Schema Validation
 
@@ -2650,6 +2732,7 @@ Both schema files and configuration files use the `.stria` extension, but they s
 - Schema files cannot contain configuration data
 - Runtime validation ensures type safety
 - Compilation errors for schema violations
+- Schema struct definitions are validated for consistency with regular struct syntax
 
 ---
 
@@ -3462,6 +3545,10 @@ interface SchemaDeclaration extends BaseNode {
   type: "SchemaDeclaration";
   annotations: Annotation[];
   body: PropertyDeclaration[];
+  // Note: Represents schema struct definitions using any of the three equivalent forms:
+  // 1. schema struct Name { ... }
+  // 2. schema struct { ... }
+  // 3. schema { ... }
 }
 
 interface InitDeclaration extends BaseNode {

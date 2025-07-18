@@ -3,7 +3,7 @@
 - **Proposal ID**: 0002
 - **Title**: Improved schema definition
 - **Author**: sharo-jef
-- **Status**: Draft
+- **Status**: Accepted
 - **Category**: Schema System
 - **Created**: 2025-07-18
 - **Updated**: 2025-07-18
