@@ -21,7 +21,7 @@ The current `schema {}` definitions may be treated as separate implementations f
 We will improve schema definitions as follows:
 
 - Use `schema` as a prefix for struct definitions like `schema struct Hoge {}`, rather than using `schema {}` as a standalone syntax.
-- Only one struct definition with the `schema` keyword can be placed in a file.
+- Only one struct definition with the `schema` keyword can be placed in a file. This constraint ensures that each schema struct is self-contained and avoids potential conflicts or ambiguities when referencing schemas. It also simplifies tooling and validation processes by enforcing a one-to-one mapping between schema files and schema structs.
 - Since the `schema` keyword is merely a prefix, it will be treated the same as regular struct definitions thereafter.
 - Structs with the `schema` keyword will be implicitly instantiated as singletons when referenced by the `#schema` directive.
   - On the config file side, top-level instantiation follows the definitions within the schema struct.
