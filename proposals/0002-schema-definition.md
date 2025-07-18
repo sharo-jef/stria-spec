@@ -66,7 +66,7 @@ a {
 ### Semantics
 
 - `schema struct Hoge {}` defines a schema.
-  - A name can be specified to align with existing struct definition syntax, but the name is not used.
+  - A name can be specified to align with existing struct definition syntax, but the name is optional and used only for documentation purposes.
 - `schema struct {}` defines a schema similar to the above, but the name is omitted.
 - `schema {}` defines a schema with both the name and `struct` keyword omitted. The meaning is the same as the above two forms.
 
