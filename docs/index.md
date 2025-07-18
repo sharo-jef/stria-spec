@@ -1067,6 +1067,193 @@ val grade = match score {
 
 Range patterns in match expressions are evaluated using the `in` operator internally. For example, `0..12` is equivalent to `score in 0..12`.
 
+#### Exhaustiveness Checking
+
+Match expressions in Stria are required to be **exhaustive**, meaning they must handle all possible values of the matched expression. The compiler performs static analysis to verify exhaustiveness at compile time.
+
+##### Exhaustiveness for Primitive Types
+
+For primitive types with finite value spaces, exhaustiveness checking ensures all values are covered:
+
+```stria
+// Boolean exhaustiveness
+val result = match flag {
+    true -> "enabled"
+    false -> "disabled"
+    // No else clause needed - all boolean values are covered
+}
+
+// Using else clause for boolean (also valid)
+val result = match flag {
+    true -> "enabled"
+    else -> "disabled"  // Covers false
+}
+```
+
+##### Exhaustiveness for Union Types
+
+Union types require all type variants to be explicitly handled:
+
+```stria
+union Value = string | i32 | bool
+
+// Exhaustive match - all union variants covered
+val description = match value {
+    is string -> `String: ${value}`
+    is i32 -> `Integer: ${value}`
+    is bool -> `Boolean: ${value}`
+    // No else clause needed - all union variants are covered
+}
+
+// Compile-time error: non-exhaustive match
+val incomplete = match value {
+    is string -> `String: ${value}`
+    is i32 -> `Integer: ${value}`
+    // Error: Missing pattern for 'bool'
+}
+
+// Using else clause for union types (also valid)
+val withElse = match value {
+    is string -> `String: ${value}`
+    is i32 -> `Integer: ${value}`
+    else -> `Other: ${value}`  // Covers remaining variants (bool)
+}
+```
+
+##### Exhaustiveness for Numeric Types
+
+For numeric types with large value spaces, an `else` clause is typically required:
+
+```stria
+// Exhaustive with else clause
+val category = match age {
+    0..12 -> "Child"
+    13..19 -> "Teen"
+    20..64 -> "Adult"
+    65..150 -> "Senior"
+    else -> "Invalid age"  // Required to cover remaining values
+}
+
+// Compile-time error: non-exhaustive match
+val incomplete = match score {
+    90..100 -> "A"
+    80..89 -> "B"
+    // Error: Not all possible i32 values are covered
+}
+```
+
+##### Exhaustiveness for Optional Types
+
+Optional types require handling both the `null` case and the non-null case:
+
+```stria
+val result = match optionalValue {
+    null -> "No value"
+    is string -> `Value: ${optionalValue}`
+    // Exhaustive - both null and non-null cases covered
+}
+
+// Using else for optional types
+val result = match optionalValue {
+    null -> "No value"
+    else -> `Value: ${optionalValue}`  // Covers all non-null cases
+}
+
+// Compile-time error: non-exhaustive match
+val incomplete = match optionalValue {
+    is string -> `Value: ${optionalValue}`
+    // Error: Missing pattern for 'null'
+}
+```
+
+##### Exhaustiveness with Value Patterns
+
+When using specific value patterns, exhaustiveness checking verifies all possible values:
+
+```stria
+// Exhaustive enum-like matching
+union Status = "success" | "error" | "pending"
+
+val message = match status {
+    "success" -> "Operation completed"
+    "error" -> "Operation failed"
+    "pending" -> "Operation in progress"
+    // Exhaustive - all string literal values covered
+}
+
+// Compile-time error: non-exhaustive match
+val incomplete = match status {
+    "success" -> "Operation completed"
+    "error" -> "Operation failed"
+    // Error: Missing pattern for 'pending'
+}
+```
+
+##### Nested Pattern Exhaustiveness
+
+For nested patterns, exhaustiveness checking applies recursively:
+
+```stria
+union Result = Success | Error
+
+struct Success {
+    value: string
+}
+
+struct Error {
+    code: i32
+    message: string
+}
+
+// Exhaustive nested matching
+val output = match result {
+    is Success -> match result.value {
+        "" -> "Empty success"
+        else -> `Success: ${result.value}`
+    }
+    is Error -> match result.code {
+        404 -> "Not found"
+        500 -> "Server error"
+        else -> `Error ${result.code}: ${result.message}`
+    }
+}
+```
+
+##### Compiler Error Messages
+
+The compiler provides detailed error messages for non-exhaustive matches:
+
+```stria
+// Example error message:
+val incomplete = match value {
+    is string -> "String"
+    is i32 -> "Integer"
+}
+// Error: Match expression is not exhaustive
+// Missing patterns for: bool
+// Help: Add a pattern for 'bool' or use an 'else' clause
+```
+
+##### Exhaustiveness Checking Rules
+
+1. **Static Analysis**: Exhaustiveness is checked at compile time, not runtime
+2. **All Paths Required**: Every possible value must have a matching pattern
+3. **Union Type Coverage**: All variants of union types must be explicitly handled
+4. **Null Safety**: Optional types must handle both null and non-null cases
+5. **Value Pattern Coverage**: When using specific values, all possible values must be covered
+6. **Else Clause**: Can be used as a catch-all to cover remaining cases
+7. **Dead Code Detection**: Unreachable patterns (after exhaustive coverage) generate warnings
+8. **Order Independence**: Exhaustiveness checking is independent of pattern order
+
+##### Performance Considerations
+
+Exhaustiveness checking is performed entirely at compile time:
+
+- **No Runtime Overhead**: All checks are resolved during compilation
+- **Compile-time Guarantee**: Runtime will never encounter unhandled cases
+- **Optimization Opportunity**: Compilers can optimize match expressions knowing all cases are handled
+- **Static Analysis Tools**: IDE support for exhaustiveness checking and pattern completion
+
 #### Match Expression Rules
 
 - Match expressions must be exhaustive (cover all possible cases)
