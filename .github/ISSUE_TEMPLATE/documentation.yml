@@ -1,0 +1,48 @@
+---
+name: 📚 Documentation Issue
+about: Report an issue with documentation or request documentation improvements
+title: '[DOCS] '
+labels: ['documentation', 'needs-triage']
+assignees: ''
+---
+
+## Documentation Issue
+
+<!-- Describe the documentation issue -->
+
+## Location
+
+<!-- Where in the documentation is the issue? -->
+- **Section**: 
+- **Page**: 
+- **URL**: 
+
+## Issue Type
+
+<!-- What type of documentation issue is this? -->
+- [ ] Missing documentation
+- [ ] Incorrect information
+- [ ] Unclear explanation
+- [ ] Outdated information
+- [ ] Broken links
+- [ ] Other: 
+
+## Current State
+
+<!-- What is currently documented (if anything)? -->
+
+## Suggested Improvement
+
+<!-- What should be documented or how should it be improved? -->
+
+## Examples
+
+<!-- If applicable, provide examples of what should be documented -->
+
+```stria
+// Example code that needs documentation
+```
+
+## Additional Context
+
+<!-- Add any other context about the documentation request here -->

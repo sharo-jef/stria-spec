@@ -1,0 +1,50 @@
+---
+name: 📋 Language Proposal
+about: Propose a new language feature or change to Stria
+title: '[PROPOSAL] '
+labels: ['proposal', 'needs-triage']
+assignees: ''
+---
+
+## Proposal Summary
+
+<!-- Provide a brief, one-paragraph summary of your proposal -->
+
+## Motivation
+
+<!-- Explain why this change is needed. What problem does it solve? -->
+
+## Proposed Solution
+
+<!-- Describe your proposed solution at a high level -->
+
+## Examples
+
+<!-- Show how your proposed feature would be used -->
+
+```stria
+// Example code here
+```
+
+## Alternatives Considered
+
+<!-- What other approaches did you consider? Why did you choose this one? -->
+
+## Implementation Considerations
+
+<!-- Are there any implementation challenges or considerations? -->
+
+## Compatibility Impact
+
+<!-- Does this change affect backward compatibility? -->
+
+## Checklist
+
+- [ ] I have searched for existing similar proposals
+- [ ] I am willing to help implement this feature
+- [ ] I understand this is a proposal and may be rejected
+- [ ] I will create a detailed proposal document if this gains interest
+
+## Additional Context
+
+<!-- Add any other context, screenshots, or references about the proposal here -->

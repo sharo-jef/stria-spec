@@ -1,0 +1,136 @@
+name: Documentation Build
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "docs/**"
+      - "proposals/**"
+      - ".github/workflows/docs.yml"
+  pull_request:
+    branches: [master]
+    paths:
+      - "docs/**"
+      - "proposals/**"
+      - ".github/workflows/docs.yml"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: Install dependencies
+        run: |
+          npm install -g markdown-link-check
+
+      - name: Check documentation links
+        run: |
+          echo "Checking documentation links..."
+          find docs -name "*.md" -exec markdown-link-check {} \; || true
+
+      - name: Validate documentation structure
+        run: |
+          echo "Validating documentation structure..."
+
+          # Check if main specification file exists
+          if [ ! -f "docs/index.md" ]; then
+            echo "❌ Main specification file (docs/index.md) not found"
+            exit 1
+          fi
+
+          echo "✅ Documentation structure is valid"
+
+      - name: Check for broken internal links
+        run: |
+          echo "Checking for broken internal links..."
+
+          # Find all markdown files
+          MD_FILES=$(find docs proposals -name "*.md")
+
+          # Check for internal links
+          for file in $MD_FILES; do
+            # Extract internal links (starting with ./ or ../)
+            INTERNAL_LINKS=$(grep -oE '\[([^\]]+)\]\((\./|\.\./)([^)]+)\)' "$file" | sed 's/.*(\(.*\)).*/\1/' || true)
+            
+            if [ -n "$INTERNAL_LINKS" ]; then
+              echo "Checking internal links in $file:"
+              
+              for link in $INTERNAL_LINKS; do
+                # Convert relative path to absolute path
+                LINK_PATH=$(dirname "$file")/"$link"
+                NORMALIZED_PATH=$(realpath --relative-to=. "$LINK_PATH" 2>/dev/null || echo "$LINK_PATH")
+                
+                if [ ! -f "$NORMALIZED_PATH" ]; then
+                  echo "❌ Broken internal link in $file: $link -> $NORMALIZED_PATH"
+                  exit 1
+                fi
+              done
+            fi
+          done
+
+          echo "✅ No broken internal links found"
+
+      - name: Generate proposal index
+        run: |
+          echo "Generating proposal index..."
+
+          # Create temporary file for new proposal list
+          TEMP_FILE=$(mktemp)
+
+          # Start with the existing README content up to the Active Proposals section
+          sed '/^## Active Proposals$/q' proposals/README.md > "$TEMP_FILE"
+
+          # Add table header
+          echo "" >> "$TEMP_FILE"
+          echo "| ID | Title | Status | Category |" >> "$TEMP_FILE"
+          echo "|----|-------|--------|----------|" >> "$TEMP_FILE"
+
+          # Process all proposal files
+          for file in proposals/[0-9]*.md; do
+            if [ -f "$file" ] && [ "$file" != "proposals/0000-template.md" ]; then
+              # Extract metadata
+              PROP_ID=$(grep "^- \*\*Proposal ID\*\*:" "$file" | sed 's/^- \*\*Proposal ID\*\*: *//' | head -1)
+              TITLE=$(grep "^- \*\*Title\*\*:" "$file" | sed 's/^- \*\*Title\*\*: *//' | head -1)
+              STATUS=$(grep "^- \*\*Status\*\*:" "$file" | sed 's/^- \*\*Status\*\*: *//' | head -1)
+              CATEGORY=$(grep "^- \*\*Category\*\*:" "$file" | sed 's/^- \*\*Category\*\*: *//' | head -1)
+              
+              # Add to table
+              if [ -n "$PROP_ID" ] && [ -n "$TITLE" ] && [ -n "$STATUS" ] && [ -n "$CATEGORY" ]; then
+                echo "| [$PROP_ID]($(basename "$file")) | $TITLE | $STATUS | $CATEGORY |" >> "$TEMP_FILE"
+              fi
+            fi
+          done
+
+          # Add the rest of the original README
+          sed -n '/^## Recently Implemented$/,$p' proposals/README.md >> "$TEMP_FILE"
+
+          # Replace the original README
+          mv "$TEMP_FILE" proposals/README.md
+
+          echo "✅ Proposal index updated"
+
+      - name: Check for changes
+        id: changes
+        run: |
+          if git diff --quiet; then
+            echo "changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "changes=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit changes
+        if: steps.changes.outputs.changes == 'true' && github.event_name == 'push'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add proposals/README.md
+          git commit -m "docs: update proposal index" || exit 0
+          git push

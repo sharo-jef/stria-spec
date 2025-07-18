@@ -1,0 +1,144 @@
+name: Validate Proposals
+
+on:
+  pull_request:
+    paths:
+      - "proposals/**"
+      - ".github/workflows/validate-proposals.yml"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: Install dependencies
+        run: |
+          npm install -g markdown-link-check
+
+      - name: Validate proposal format
+        run: |
+          # Check if any proposal files were modified
+          CHANGED_FILES=$(git diff --name-only origin/master...HEAD | grep '^proposals/' | grep '\.md$' || true)
+
+          if [ -n "$CHANGED_FILES" ]; then
+            echo "Validating proposal files:"
+            echo "$CHANGED_FILES"
+            
+            for file in $CHANGED_FILES; do
+              if [ -f "$file" ]; then
+                echo "Validating $file"
+                
+                # Check if it's not the template file
+                if [ "$file" != "proposals/0000-template.md" ]; then
+                  # Check required sections exist
+                  if ! grep -q "^## Summary" "$file"; then
+                    echo "❌ Missing 'Summary' section in $file"
+                    exit 1
+                  fi
+                  
+                  if ! grep -q "^## Motivation" "$file"; then
+                    echo "❌ Missing 'Motivation' section in $file"
+                    exit 1
+                  fi
+                  
+                  if ! grep -q "^## Detailed Design" "$file"; then
+                    echo "❌ Missing 'Detailed Design' section in $file"
+                    exit 1
+                  fi
+                  
+                  if ! grep -q "^## Examples" "$file"; then
+                    echo "❌ Missing 'Examples' section in $file"
+                    exit 1
+                  fi
+                  
+                  # Check metadata format
+                  if ! grep -q "^- \*\*Proposal ID\*\*:" "$file"; then
+                    echo "❌ Missing 'Proposal ID' metadata in $file"
+                    exit 1
+                  fi
+                  
+                  if ! grep -q "^- \*\*Title\*\*:" "$file"; then
+                    echo "❌ Missing 'Title' metadata in $file"
+                    exit 1
+                  fi
+                  
+                  if ! grep -q "^- \*\*Status\*\*:" "$file"; then
+                    echo "❌ Missing 'Status' metadata in $file"
+                    exit 1
+                  fi
+                  
+                  echo "✅ $file format is valid"
+                fi
+              fi
+            done
+          else
+            echo "No proposal files to validate"
+          fi
+
+      - name: Check for duplicate proposal IDs
+        run: |
+          # Extract proposal IDs from all proposal files (excluding template)
+          PROPOSAL_IDS=$(find proposals -name "*.md" -not -name "0000-template.md" -not -name "README.md" | \
+            xargs grep -h "^- \*\*Proposal ID\*\*:" | \
+            sed 's/^- \*\*Proposal ID\*\*: *//' | \
+            sort)
+
+          if [ -n "$PROPOSAL_IDS" ]; then
+            DUPLICATE_IDS=$(echo "$PROPOSAL_IDS" | uniq -d)
+            
+            if [ -n "$DUPLICATE_IDS" ]; then
+              echo "❌ Duplicate proposal IDs found:"
+              echo "$DUPLICATE_IDS"
+              exit 1
+            else
+              echo "✅ No duplicate proposal IDs found"
+            fi
+          else
+            echo "No proposal IDs to check"
+          fi
+
+      - name: Check markdown links
+        run: |
+          # Check links in changed proposal files
+          CHANGED_FILES=$(git diff --name-only origin/master...HEAD | grep '^proposals/' | grep '\.md$' || true)
+
+          if [ -n "$CHANGED_FILES" ]; then
+            for file in $CHANGED_FILES; do
+              if [ -f "$file" ]; then
+                echo "Checking links in $file"
+                markdown-link-check "$file" --config .github/workflows/link-check-config.json || true
+              fi
+            done
+          fi
+
+      - name: Validate proposal numbering
+        run: |
+          # Check if new proposals follow numbering convention
+          CHANGED_FILES=$(git diff --name-only origin/master...HEAD | grep '^proposals/' | grep '\.md$' || true)
+
+          if [ -n "$CHANGED_FILES" ]; then
+            for file in $CHANGED_FILES; do
+              if [ -f "$file" ] && [ "$file" != "proposals/0000-template.md" ] && [ "$file" != "proposals/README.md" ]; then
+                # Extract filename number
+                FILENAME_NUM=$(basename "$file" | sed 's/-.*//' | sed 's/^0*//')
+                
+                # Extract proposal ID from file content
+                PROPOSAL_ID=$(grep "^- \*\*Proposal ID\*\*:" "$file" | sed 's/^- \*\*Proposal ID\*\*: *//' | sed 's/^0*//')
+                
+                if [ "$FILENAME_NUM" != "$PROPOSAL_ID" ]; then
+                  echo "❌ Proposal ID ($PROPOSAL_ID) doesn't match filename number ($FILENAME_NUM) in $file"
+                  exit 1
+                fi
+              fi
+            done
+            
+            echo "✅ Proposal numbering is consistent"
+          fi

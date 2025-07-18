@@ -1,0 +1,45 @@
+---
+name: 💭 General Discussion
+about: Start a discussion about Stria language design or direction
+title: '[DISCUSSION] '
+labels: ['discussion', 'needs-triage']
+assignees: ''
+---
+
+## Discussion Topic
+
+<!-- What would you like to discuss? -->
+
+## Background
+
+<!-- Provide context for the discussion -->
+
+## Questions
+
+<!-- What specific questions do you have? -->
+
+## Use Cases
+
+<!-- What use cases are you considering? -->
+
+## Examples
+
+<!-- If applicable, provide examples -->
+
+```stria
+// Example code here
+```
+
+## Community Input
+
+<!-- What kind of feedback or input are you looking for from the community? -->
+
+- [ ] General thoughts and opinions
+- [ ] Technical feasibility
+- [ ] Alternative approaches
+- [ ] Real-world experience
+- [ ] Other: 
+
+## Additional Context
+
+<!-- Add any other context for the discussion here -->

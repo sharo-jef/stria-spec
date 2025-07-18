@@ -1,0 +1,90 @@
+name: 🔧 Feature Request
+description: Request a new feature for the Stria language
+title: "[FEATURE] "
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Feature Summary
+      description: Provide a brief summary of the feature you're requesting
+      placeholder: Brief description of the feature
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: Explain why this feature is needed and what problem it solves
+      placeholder: Describe the problem this feature would solve
+    validations:
+      required: true
+
+  - type: textarea
+    id: detailed-description
+    attributes:
+      label: Detailed Description
+      description: Provide a detailed description of how the feature should work
+      placeholder: Detailed explanation of the feature
+    validations:
+      required: true
+
+  - type: textarea
+    id: code-example
+    attributes:
+      label: Code Example
+      description: Show how the feature would be used
+      placeholder: |
+        ```stria
+        // Example code showing the proposed feature
+        ```
+      render: markdown
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Describe alternative solutions you've considered
+      placeholder: What other approaches could solve this problem?
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Feature Category
+      description: What category does this feature fall into?
+      options:
+        - Language Features
+        - Standard Library
+        - Tooling
+        - Schema System
+        - Other
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: compatibility
+    attributes:
+      label: Compatibility
+      description: Consider compatibility impact
+      options:
+        - label: This feature is backward compatible
+        - label: This feature may break existing code
+        - label: I'm not sure about compatibility impact
+
+  - type: checkboxes
+    id: implementation
+    attributes:
+      label: Implementation
+      description: Implementation considerations
+      options:
+        - label: I'm willing to help implement this feature
+        - label: I've researched implementation complexity
+        - label: I understand this may be rejected
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Add any other context about the feature request
+      placeholder: Any additional information that might be helpful
