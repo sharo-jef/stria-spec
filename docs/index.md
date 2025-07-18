@@ -102,9 +102,11 @@ conf {
 ```json
 // Compiles to JSON:
 {
-  "host": "api.example.com",
-  "port": 443,
-  "ssl": true
+  "conf": {
+    "host": "api.example.com",
+    "port": 443,
+    "ssl": true
+  }
 }
 ```
 
@@ -207,11 +209,14 @@ Values embedded in template literals are automatically converted to strings by i
 ```stria
 val number = 42
 val boolean = true
-val struct = Point { x = 10, y = 20 }
+val point = Point {
+    x = 10
+    y = 20
+}
 
-val message = `Number: ${number}, Boolean: ${boolean}, Struct: ${struct}`
+val message = `Number: ${number}, Boolean: ${boolean}, Struct: ${point}`
 // Equivalent to:
-val message = `Number: ${number.toString()}, Boolean: ${boolean.toString()}, Struct: ${struct.toString()}`
+val message = `Number: ${number.toString()}, Boolean: ${boolean.toString()}, Struct: ${point.toString()}`
 ```
 
 **Type Conversion Rules:**
@@ -256,10 +261,10 @@ val isFalse = false
 #### List Literals
 
 ```stria
-val numbers = [1, 2, 3, 4, 5]            // List<i32>
-val strings = ['a', 'b', 'c']            // List<string>
-val mixed = [1, 'two', true]             // List<i32 | string | bool>
-val empty: List<i32> = []                // Empty list with explicit type
+val numbers = [1, 2, 3, 4, 5]            // i32[]
+val strings = ['a', 'b', 'c']            // string[]
+val mixed = [1, 'two', true]             // (i32 | string | bool)[]
+val empty: i32[] = []                // Empty list with explicit type
 ```
 
 ---
