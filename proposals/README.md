@@ -65,10 +65,10 @@ This directory contains proposals for changes and additions to the Stria languag
 
 ## Active Proposals
 
-| ID                               | Title            | Status | Category          |
-| -------------------------------- | ---------------- | ------ | ----------------- |
-| [0001](0001-example-proposal.md) | Example Proposal | Draft  | Language Features |
-
+| ID | Title | Status | Category |
+|----|-------|--------|----------|
+| [0001](0001-example-proposal.md) | Enhanced String Interpolation with Format Specifiers | Draft | Language Features |
+| [0002](0002-schema-definition.md) | Improved schema definition | Accepted | Schema System |
 ## Recently Implemented
 
 | ID  | Title | Implemented In | Category |
