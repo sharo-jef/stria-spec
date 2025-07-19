@@ -77,13 +77,13 @@ Stria is designed as a **configuration description language** that compiles to s
 ```stria
 // schema.stria
 schema struct {
-    conf: ServerConfig
+    var conf: ServerConfig
 }
 
 struct ServerConfig {
-    host: string
-    port: u16
-    ssl: bool
+    var host: string
+    var port: u16
+    var ssl: bool
 }
 ```
 
@@ -153,7 +153,6 @@ Identifiers follow standard conventions:
 
 ```stria
 validIdentifier
-_privateField
 myVariable123
 ```
 
@@ -164,10 +163,22 @@ Reserved keywords in Stria:
 ```
 struct    init      fun       val       var
 if        else      true      false     null
-this      get       repeated  private   use
+this      get       repeated  use       private
 schema    mixin     error     match     when
 as        is
 ```
+
+**Property Modifiers:**
+
+- `val`: Makes property immutable (single assignment only)
+- `var`: Makes property mutable (can be reassigned)
+- `private`: Restricts property access to within the struct only
+
+**Annotations:**
+
+- `@NoSerialize`: Excludes property from serialization output
+
+**Note**: All properties must be explicitly declared with either `val` or `var` modifier. The `private` modifier and `@NoSerialize` annotation can be combined with either `val` or `var`.
 
 ### Literals
 
@@ -569,10 +580,10 @@ Stria provides static member access for struct properties using dot notation. Th
 
 ```stria
 struct DatabaseConfig {
-    host: string
-    port: u16
-    username: string
-    password?: string
+    var host: string
+    var port: u16
+    var username: string
+    var password?: string
 }
 
 val config = DatabaseConfig {
@@ -624,10 +635,10 @@ Member access is commonly used in configuration scenarios:
 
 ```stria
 struct ServerConfig {
-    host: string
-    port: u16
-    ssl: bool
-    maxConnections?: u32
+    var host: string
+    var port: u16
+    var ssl: bool
+    var maxConnections?: u32
 }
 
 val server = ServerConfig {
@@ -685,15 +696,15 @@ Range expressions are interpreted as `RangeExpression` at compile time and handl
 
 ```stria
 struct Range<i32> {
-    from: i32
-    to: i32
-    step: i32 = 1
+    val from: i32
+    val to: i32
+    val step: i32 = 1
 }
 
 struct Range<f64> {
-    from: f64
-    to: f64
-    step: f64 = 1.0
+    val from: f64
+    val to: f64
+    val step: f64 = 1.0
 }
 ```
 
@@ -938,9 +949,14 @@ val result = x + y
 ### Variable Declarations
 
 ```stria
-val immutableValue = 42        // Immutable
-var mutableValue = 'hello'     // Mutable
+val immutableValue = 42        // Immutable variable
+var mutableValue = 'hello'     // Mutable variable
 ```
+
+**Note**: `val` and `var` keywords also serve as property modifiers in struct definitions:
+
+- **Variable context**: `val` creates immutable variables, `var` creates mutable variables
+- **Property context**: `val` creates immutable properties (single assignment), `var` creates mutable properties (default behavior)
 
 ### If Expressions
 
@@ -1197,12 +1213,12 @@ For nested patterns, exhaustiveness checking applies recursively:
 union Result = Success | Error
 
 struct Success {
-    value: string
+    val value: string
 }
 
 struct Error {
-    code: i32
-    message: string
+    val code: i32
+    val message: string
 }
 
 // Exhaustive nested matching
@@ -1299,8 +1315,8 @@ struct Config {
         environment = getEnvironment()
         counter = globalCounter
     }
-    environment: string
-    counter: i32
+    var environment: string
+    var counter: i32
 }
 ```
 
@@ -1350,6 +1366,8 @@ Struct members have struct scope and are accessible within method bodies:
 
 ```stria
 struct Calculator {
+    var result: i32
+
     init {
         result = 0
     }
@@ -1363,8 +1381,6 @@ struct Calculator {
         // 'result' is accessible, but 'value' from add() is not
         result *= value
     }
-
-    result: i32
 }
 ```
 
@@ -1420,7 +1436,7 @@ struct ServerConfig {
         this.port = port ?: defaultPort  // Uses local 'defaultPort' (3000)
     }
 
-    port: u16
+    var port: u16
 }
 
 val config = ServerConfig(null)  // config.port = 3000
@@ -1430,7 +1446,7 @@ val global = defaultPort         // 8080
 #### Shadowing Rules
 
 1. **Inner scope variables shadow outer scope variables** with the same name
-2. **Shadowing is allowed across different scope levels** (global → function → block)
+2. **Shadowing is allowed across different scope levels** (global ↁEfunction ↁEblock)
 3. **No shadowing within the same scope level** - redeclaration in the same scope is an error
 4. **Shadowed variables are temporarily hidden** but not destroyed
 5. **Original variables become accessible again** when the shadowing scope ends
@@ -1520,7 +1536,7 @@ struct Config {
         timeout = 30      // Property lifetime starts here
     }
 
-    timeout: i32
+    var timeout: i32
 }
 
 val config = Config()     // config.timeout lifetime starts
@@ -1537,7 +1553,7 @@ struct Calculator {
         result += value   // Method can access properties throughout struct lifetime
     }
 
-    result: i32
+    var result: i32
 }
 
 val calc = Calculator()   // calc.add() becomes available
@@ -1564,10 +1580,10 @@ struct DatabaseConfig {
         `${host}:${port}/${database}`
     }
 
-    host: string
-    port: u16
-    database: string
-    connectionString: string
+    var host: string
+    var port: u16
+    var database: string
+    var connectionString: string
 }
 
 // Configuration instantiation phase
@@ -1676,7 +1692,7 @@ struct ServerConfig {
         this.timeout = requestTimeout ?: globalTimeout
     }
 
-    timeout: u32
+    var timeout: u32
 }
 
 // Avoid: Confusing shadowing
@@ -1687,7 +1703,7 @@ struct ServerConfig {
         this.timeout = timeout ?: timeout  // Confusing!
     }
 
-    timeout: u32
+    var timeout: u32
 }
 ```
 
@@ -1721,9 +1737,9 @@ fun calculateTotalBad(items: List<Item>): f64 {
 
 ```stria
 struct Person {
-    name: string
-    age: u8
-    email?: string  // Optional field
+    var name: string
+    var age: u8
+    var email?: string  // Optional field
 }
 ```
 
@@ -1733,8 +1749,8 @@ All structs automatically have an implicit `toString()` getter that provides a d
 
 ```stria
 struct Point {
-    x: i32
-    y: i32
+    val x: i32
+    val y: i32
 }
 
 val point = Point { x = 10, y = 20 }
@@ -1742,8 +1758,8 @@ val defaultString = point.toString()  // Uses implicit toString()
 
 // Custom toString() implementation
 struct Person {
-    name: string
-    age: u8
+    var name: string
+    var age: u8
 
     get toString(): string {
         `${name} (${age} years old)`
@@ -1760,8 +1776,8 @@ The `toString()` getter is automatically invoked when structs are used in templa
 
 ```stria
 struct ServerConfig {
-    host: string
-    port: u16
+    var host: string
+    var port: u16
 
     get toString(): string {
         `${host}:${port}`
@@ -1778,9 +1794,9 @@ When no custom `toString()` getter is defined, the implicit implementation provi
 
 ```stria
 struct DatabaseConfig {
-    host: string
-    port: u16
-    username: string
+    var host: string
+    var port: u16
+    var username: string
 }
 
 val config = DatabaseConfig {
@@ -1809,7 +1825,7 @@ Structs cannot have properties and methods with the same name. This constraint e
 ```stria
 struct Example {
     // Valid: Different names for property and method
-    value: i32
+    val value: i32
 
     fun getValue(): i32 {
         value
@@ -1821,7 +1837,7 @@ struct Example {
 }
 
 struct Invalid {
-    value: i32
+    val value: i32
 
     // Error: Cannot define method with same name as property
     fun value(newValue: i32) {
@@ -1843,8 +1859,8 @@ Instead of same-name members, use descriptive method names:
 
 ```stria
 struct ServerConfig {
-    host: string
-    port: u16
+    var host: string
+    var port: u16
 
     // Good: Descriptive method names
     fun setHost(value: string) { host = value }
@@ -1852,6 +1868,279 @@ struct ServerConfig {
     fun getEndpoint(): string { `${host}:${port}` }
 }
 ```
+
+### Property Modifiers
+
+Stria supports property modifiers and annotations that control mutability and serialization behavior:
+
+#### Mutability Modifiers
+
+All properties must be explicitly declared with either `val` or `var`:
+
+##### `val` Properties (Immutable)
+
+Properties marked with `val` can only be assigned once and become immutable thereafter:
+
+```stria
+struct ApplicationConfig {
+    val appName: string        // Immutable property
+    val version: string        // Immutable property
+    var environment: string    // Mutable property
+    var port: u16             // Mutable property
+
+    init {
+        appName = "MyApp"      // Valid: First assignment
+        version = "1.0.0"      // Valid: First assignment
+        environment = "development"
+        port = 8080
+    }
+
+    fun updateEnvironment(env: string) {
+        environment = env      // Valid: Mutable property
+        port = 9000           // Valid: Mutable property
+        // appName = "NewApp"  // Error: Cannot reassign immutable property
+        // version = "2.0.0"   // Error: Cannot reassign immutable property
+    }
+}
+```
+
+##### `var` Properties (Mutable)
+
+Properties marked with `var` can be reassigned multiple times:
+
+```stria
+struct ServerConfig {
+    var host: string          // Mutable property
+    var port: u16            // Mutable property
+    var isActive: bool       // Mutable property
+
+    init {
+        host = "localhost"
+        port = 8080
+        isActive = true
+    }
+
+    fun updateServer(newHost: string, newPort: u16) {
+        host = newHost        // Valid: Mutable property
+        port = newPort        // Valid: Mutable property
+        isActive = false      // Valid: Mutable property
+    }
+}
+```
+
+#### Access Modifiers
+
+##### `private` Properties
+
+Properties marked with `private` can only be accessed from within the struct itself:
+
+```stria
+struct UserAccount {
+    var username: string           // Public property
+    private var password: string   // Private property - only accessible within struct
+    var email: string             // Public property
+
+    init {
+        username = "user123"
+        password = "secret"        // Valid: Accessing private property within struct
+        email = "user@example.com"
+    }
+
+    fun updatePassword(newPassword: string) {
+        password = newPassword     // Valid: Accessing private property within struct
+    }
+
+    fun getHashedPassword(): string {
+        hashPassword(password)     // Valid: Using private property within struct
+    }
+}
+
+val account = UserAccount()
+val user = account.username       // Valid: Accessing public property
+val mail = account.email          // Valid: Accessing public property
+// val secret = account.password  // Error: Cannot access private property
+```
+
+**Private Property Characteristics:**
+
+- **Internal Access Only**: Accessible only within the struct's methods and initialization blocks
+- **External Access Denied**: Cannot be accessed from outside the struct
+- **Encapsulation**: Provides data hiding and encapsulation
+- **Security**: Prevents direct access to sensitive or internal data
+- **Still Serialized**: Private properties are included in serialization output by default (unless combined with `@NoSerialize`)
+
+#### Serialization Annotations
+
+##### `@NoSerialize` Annotation
+
+Properties marked with `@NoSerialize` are excluded from serialization output but remain accessible within the struct. They serve as intermediate values used for computation:
+
+```stria
+struct DatabaseConfig {
+    var host: string
+    var port: u16
+    var database: string
+    @NoSerialize var rawPassword: string        // Input password, not serialized
+    @NoSerialize var encryptionKey: string      // Internal key, not serialized
+    var connectionString: string                // Computed from private values
+
+    init {
+        rawPassword = loadPassword()
+        encryptionKey = generateKey()
+        connectionString = buildSecureConnection()
+    }
+
+    fun buildSecureConnection(): string {
+        // @NoSerialize properties are used in computation
+        val hashedPassword = hash(rawPassword, encryptionKey)
+        `${host}:${port}/${database}?auth=${hashedPassword}`
+    }
+}
+
+val config = DatabaseConfig {
+    host = "localhost"
+    port = 5432
+    database = "myapp"
+}
+
+// Serialized output excludes @NoSerialize properties:
+// {
+//   "host": "localhost",
+//   "port": 5432,
+//   "database": "myapp",
+//   "connectionString": "localhost:5432/myapp?auth=abc123..."
+// }
+```
+
+**@NoSerialize Use Cases:**
+
+1. **Intermediate Calculations**: Hold temporary values used to compute final configuration
+2. **Build-time Only Data**: Store information needed only during configuration construction
+3. **Conditional Logic State**: Track internal state for complex initialization logic
+4. **Performance Optimization**: Exclude large computed values from serialization
+
+```stria
+struct ApiConfig {
+    var endpoint: string
+    var timeout: u32
+    @NoSerialize var rawApiKey: string          // Original API key
+    @NoSerialize var keyVersion: string         // Key version info
+    var hashedToken: string                     // Public token derived from private data
+
+    init {
+        rawApiKey = loadApiKey()
+        keyVersion = detectKeyVersion(rawApiKey)
+        hashedToken = generatePublicToken(rawApiKey, keyVersion)
+        endpoint = selectEndpoint(keyVersion)
+    }
+
+    fun selectEndpoint(version: string): string {
+        if (version == "v2") "https://api-v2.example.com" else "https://api.example.com"
+    }
+}
+
+// Server configuration with build-time calculations
+struct ServerConfig {
+    var host: string
+    var port: u16
+    var maxConnections: u32
+    @NoSerialize var cpuCores: u32              // Build-time system info
+    @NoSerialize var memoryMB: u32              // Build-time system info
+    @NoSerialize var loadFactor: f64            // Computed scaling factor
+
+    init {
+        cpuCores = detectCpuCores()
+        memoryMB = detectMemoryMB()
+        loadFactor = calculateOptimalLoad(cpuCores, memoryMB)
+        maxConnections = (cpuCores * 100 * loadFactor) as u32
+    }
+
+    fun calculateOptimalLoad(cores: u32, memory: u32): f64 {
+        // Complex calculation using @NoSerialize properties
+        val coreWeight = cores as f64 * 0.3
+        val memoryWeight = (memory / 1024) as f64 * 0.7
+        (coreWeight + memoryWeight) / 100.0
+    }
+}
+```
+
+**@NoSerialize Property Characteristics:**
+
+- **External Access**: Accessible from outside the struct (unless combined with `private`)
+- **Internal Access**: Accessible within struct methods and initialization blocks
+- **Serialization**: Excluded from JSON/YAML/TOML output
+- **Schema Validation**: Not included in schema definitions
+- **Build-time Processing**: Used for intermediate calculations and transformations
+- **Security**: Prevents sensitive data from appearing in final configuration files
+
+#### Combined Modifiers and Annotations
+
+Modifiers and annotations can be combined to create properties with specific behavior:
+
+```stria
+struct SecurityConfig {
+    val publicKey: string                       // Immutable, serialized
+    @NoSerialize val privateKey: string         // Immutable, not serialized
+    @NoSerialize var sessionCache: string?      // Mutable, not serialized
+    var timeout: u32                            // Mutable, serialized
+    private var internalState: string           // Mutable, serialized, access-controlled
+    @NoSerialize private var secretData: string // Mutable, not serialized, access-controlled
+
+    init {
+        publicKey = loadPublicKey()
+        privateKey = loadPrivateKey()
+        sessionCache = null
+        timeout = 3600
+        internalState = "initialized"
+        secretData = generateSecret()
+    }
+
+    fun generateToken(): string {
+        // Use @NoSerialize properties for computation
+        sessionCache = createSession(privateKey)
+        `${publicKey}:${sessionCache}`
+    }
+}
+
+// Serialized output includes only properties without @NoSerialize:
+// {
+//   "publicKey": "...",
+//   "timeout": 3600,
+//   "internalState": "initialized"
+// }
+```
+
+#### Modifier and Annotation Rules
+
+**Syntax Rules:**
+
+- Modifiers (`val`/`var`) must appear before the property name
+- Access modifiers (`private`) must appear before mutability modifiers
+- Annotations (`@NoSerialize`) must appear before all modifiers
+- All properties must have either `val` or `var` modifier
+
+```stria
+struct Example {
+    @NoSerialize private val immutableSecret: string    // Correct order
+    private val publicReadonly: string                  // Correct: access + mutability
+    @NoSerialize var mutableSecret: string              // Correct: annotation + mutability
+    var publicMutable: string                           // Correct: mutability only
+
+    // Error examples:
+    // val @NoSerialize invalid: string                 // Error: Wrong order
+    // private @NoSerialize val invalid: string         // Error: Wrong order
+    // secret: string                                   // Error: Missing val/var modifier
+}
+```
+
+**Assignment Validation:**
+
+- **`val` properties**: Must be assigned exactly once
+- **`var` properties**: Can be assigned multiple times
+- **`private` properties**: Only accessible within the struct
+- **`@NoSerialize` properties**: Excluded from serialization output
+- **`@NoSerialize` properties**: Excluded from serialization but otherwise behave normally
+- **Assignment timing**: All required properties must be assigned before execution completes
 
 ### Property Assignment Requirements
 
@@ -1875,50 +2164,165 @@ As a configuration description language, Stria has unique property assignment re
 
 ```stria
 struct DatabaseConfig {
-    host: string      // Required - must be assigned before execution completes
-    port: u16         // Required - must be assigned before execution completes
-    username: string  // Required - must be assigned before execution completes
-    password?: string // Optional - can remain unassigned
+    val connectionId: string              // Immutable, serialized
+    var host: string                      // Mutable, serialized
+    var port: u16                        // Mutable, serialized
+    var username: string                 // Mutable, serialized
+    var password?: string                // Optional, mutable, serialized
+    @NoSerialize val encryptionKey: string // Immutable, not serialized
+    @NoSerialize var connectionPool?: string // Mutable, not serialized
 }
 
 // Valid: All required properties assigned during initialization
 val config1 = DatabaseConfig {
+    connectionId = "db-conn-001"        // Immutable: can only be set once
     host = 'localhost'
     port = 5432
     username = 'admin'
+    encryptionKey = 'secret-key-123'    // @NoSerialize immutable
 }
 
 // Also valid: Required properties assigned later during execution
 val config2 = DatabaseConfig {}
+config2.connectionId = "db-conn-002"   // First assignment - valid
 config2.host = 'localhost'
 config2.port = 5432
 config2.username = 'admin'
+config2.encryptionKey = 'secret-key-456'  // @NoSerialize immutable first assignment
 // password remains null (implicitly initialized)
+// connectionPool remains null (implicitly initialized)
 // Execution completes successfully as all required properties are assigned
 
-// Valid: Optional property explicitly assigned
+// Valid: Mutable property reassignment
+config2.host = 'production-db.example.com'  // Valid: var property
+config2.port = 5433                         // Valid: var property
+config2.connectionPool = 'pool-connection'  // Valid: @NoSerialize var property
+
+// Invalid: Immutable property reassignment
+// config2.connectionId = "db-conn-003"     // Error: Cannot reassign val property
+// config2.encryptionKey = "new-key"       // Error: Cannot reassign @NoSerialize val property
+
+// Valid: Optional property assignment
 val config3 = DatabaseConfig {
+    connectionId = "db-conn-003"
     host = 'localhost'
     port = 5432
     username = 'admin'
-    password = 'secret123'  // Optional property explicitly assigned
+    password = 'secret123'              // Optional property explicitly assigned
+    encryptionKey = 'secret-key-789'
 }
 
 // Valid: Optional property accessed as null
 val config4 = DatabaseConfig {
+    connectionId = "db-conn-004"
     host = 'localhost'
     port = 5432
     username = 'admin'
+    encryptionKey = 'secret-key-abc'
 }
 val hasPassword = config4.password != null  // false, password is null
 
+// Serialization output for config4 (excludes @NoSerialize properties):
+// {
+//   "connectionId": "db-conn-004",
+//   "host": "localhost",
+//   "port": 5432,
+//   "username": "admin",
+//   "password": null
+// }
+
 // Invalid: Would cause runtime error
 val config5 = DatabaseConfig {
+    connectionId = "db-conn-005"
     host = 'localhost'
     port = 5432
     // username not assigned - runtime error at execution completion
+    // encryptionKey not assigned - runtime error at execution completion
 }
 ```
+
+#### Property Modifier and Annotation Use Cases
+
+**Configuration Management Examples:**
+
+```stria
+// Application Configuration
+struct AppConfig {
+    val appName: string                         // Immutable application identity
+    val version: string                         // Immutable version info
+    var environment: string                     // Mutable environment setting
+    var debugMode: bool                        // Mutable debug flag
+    @NoSerialize val buildId: string            // Internal build identifier, not serialized
+    @NoSerialize var lastModified: string       // Internal timestamp, not serialized
+
+    init {
+        appName = "MyApplication"
+        version = "1.0.0"
+        environment = "production"
+        debugMode = false
+        buildId = generateBuildId()
+        lastModified = currentTimestamp()
+    }
+
+    fun updateEnvironment(env: string) {
+        environment = env
+        lastModified = currentTimestamp()       // Update internal state
+    }
+}
+
+// Server Configuration
+struct ServerConfig {
+    val serverId: string                        // Immutable server identity
+    var host: string                           // Mutable host setting
+    var port: u16                             // Mutable port setting
+    @NoSerialize val sslCertPath: string       // SSL certificate path, not serialized
+    @NoSerialize var requestCount: u32         // Internal metrics, not serialized
+
+    init {
+        serverId = generateServerId()
+        host = "localhost"
+        port = 8080
+        sslCertPath = "/etc/ssl/certs/server.crt"
+        requestCount = 0
+    }
+
+    fun incrementRequestCount() {
+        requestCount += 1                       // Internal state tracking
+    }
+}
+
+// API Configuration
+struct ApiConfig {
+    val apiKey: string                          // Immutable API key
+    val apiVersion: string                      // Immutable API version
+    var timeout: u32                           // Mutable timeout setting
+    var retryCount: u8                         // Mutable retry setting
+    @NoSerialize val secretKey: string          // Secret key, not serialized
+    @NoSerialize var rateLimitRemaining: u32    // Rate limit tracking, not serialized
+
+    init {
+        apiKey = loadApiKey()
+        apiVersion = "v1"
+        timeout = 30000
+        retryCount = 3
+        secretKey = loadSecretKey()
+        rateLimitRemaining = 1000
+    }
+
+    fun updateRateLimit(remaining: u32) {
+        rateLimitRemaining = remaining          // Update internal state
+    }
+}
+```
+
+**Benefits of Property Modifiers and Annotations:**
+
+1. **Security**: `@NoSerialize` properties keep sensitive data out of serialized output
+2. **Immutability**: `val` properties prevent accidental modification of critical configuration
+3. **Flexibility**: `var` properties allow runtime configuration updates
+4. **Clean Output**: Serialized configuration contains only relevant external data
+5. **Internal State**: `@NoSerialize` properties enable internal state management without exposing implementation details
+6. **Explicit Declaration**: All properties must be explicitly declared as `val` or `var` for clarity
 
 #### Execution Completion Validation
 
@@ -1936,8 +2340,8 @@ struct Point {
         x = 0
         y = 0
     }
-    x: i32
-    y: i32
+    val x: i32
+    val y: i32
 }
 ```
 
@@ -1954,8 +2358,8 @@ struct Point {
         this.x = x
         this.y = y
     }
-    x: i32
-    y: i32
+    val x: i32
+    val y: i32
 }
 ```
 
@@ -1969,8 +2373,8 @@ For parameterized initialization, the execution order is:
 ```stria
 struct Point {
     init(this.x, this.y)
-    x: i32
-    y: i32
+    val x: i32
+    val y: i32
 }
 ```
 
@@ -1983,9 +2387,9 @@ struct Point {
     init(this.x, this.y) {
         originDistance = math.sqrt(x ** 2 + y ** 2)
     }
-    x: i32
-    y: i32
-    originDistance: f64
+    val x: i32
+    val y: i32
+    var originDistance: f64
 }
 
 // Configuration example
@@ -1994,10 +2398,10 @@ struct ServerConfig {
         url = `http://${host}:${port}`
         isSecure = port == 443
     }
-    host: string
-    port: u16
-    url: string
-    isSecure: bool
+    var host: string
+    var port: u16
+    var url: string
+    var isSecure: bool
 }
 ```
 
@@ -2015,8 +2419,8 @@ struct Example {
         // Step 3: This runs after parameter assignment and postfix lambda
         processed = value * 2
     }
-    value: i32
-    processed: i32
+    val value: i32
+    var processed: i32
 }
 
 // Instantiation example showing execution order:
@@ -2031,7 +2435,7 @@ val example = Example(42) {
 
 #### Design Rationale for Execution Order
 
-The execution order (Parameter Assignment → Postfix Lambda → Init Block) is carefully designed to support flexible and intuitive configuration patterns:
+The execution order (Parameter Assignment ↁEPostfix Lambda ↁEInit Block) is carefully designed to support flexible and intuitive configuration patterns:
 
 **1. Parameter Assignment First**
 Constructor parameters are assigned immediately to establish the basic structure. This ensures that:
@@ -2054,9 +2458,9 @@ struct ServerConfig {
         normalizedUrl = baseUrl.trimEnd('/')
     }
 
-    baseUrl: string
-    isSecure: bool
-    normalizedUrl: string
+    var baseUrl: string
+    var isSecure: bool
+    var normalizedUrl: string
 }
 
 // The postfix lambda allows customization before final processing:
@@ -2098,9 +2502,9 @@ struct Version {
 
     init(this.major, this.minor, this.patch)
 
-    major: u16
-    minor: u16
-    patch: u16
+    val major: u16
+    val minor: u16
+    val patch: u16
 }
 ```
 
@@ -2147,8 +2551,8 @@ All struct constructors, even the most abbreviated forms, implicitly accept a la
 // This apparent no-argument constructor:
 struct Point {
     init { x = 0; y = 0 }
-    x: i32
-    y: i32
+    val x: i32
+    val y: i32
 }
 
 // Is actually equivalent to (shown as Kotlin-style pseudocode):
@@ -2158,8 +2562,8 @@ struct Point {
         x = 0
         y = 0
     }
-    x: i32
-    y: i32
+    val x: i32
+    val y: i32
 }
 ```
 
@@ -2246,11 +2650,11 @@ struct Pipeline {
 union Step = BuildStep | TestStep
 
 struct BuildStep {
-    command: string
+    var command: string
 }
 
 struct TestStep {
-    script: string
+    var script: string
 }
 
 val pipeline = Pipeline {
@@ -2280,12 +2684,12 @@ struct TestSuite {
 }
 
 struct UnitTest {
-    name: string
+    var name: string
 }
 
 struct IntegrationTest {
-    name: string
-    timeout: u32
+    var name: string
+    var timeout: u32
 }
 
 val suite = TestSuite {
@@ -2306,12 +2710,12 @@ val suite = TestSuite {
 
 ```stria
 struct MixinExample {
-    mixinField: string = 'default'
+    var mixinField: string = 'default'
 }
 
 struct MainStruct {
     mixin MixinExample
-    mainField: string
+    var mainField: string
 }
 ```
 
@@ -2424,7 +2828,7 @@ struct Calculator {
         if (value < 0) error('Invalid value')
     }
 
-    value: i32
+    val value: i32
 }
 ```
 
@@ -2455,7 +2859,7 @@ struct Config {
     fun version(major: u16, minor: u16, patch: u16) {
         this.version = Version(major, minor, patch)
     }
-    version: Version
+    val version: Version
 }
 
 // This is the intended usage pattern:
@@ -2471,12 +2875,12 @@ Since Stria compiles to simple data formats like JSON, the single-call constrain
 ```stria
 // schema.stria
 schema {
-    config: ServerConfig
+    var config: ServerConfig
 }
 
 struct ServerConfig {
-    host: string
-    port: u16
+    var host: string
+    var port: u16
 }
 ```
 
@@ -2513,11 +2917,11 @@ Without the single-call constraint, configuration would become ambiguous:
 // Problematic scenario without single-call constraint:
 // schema.stria
 schema {
-    config: DatabaseConfig
+    var config: DatabaseConfig
 }
 
 struct DatabaseConfig {
-    timeout: u32
+    var timeout: u32
 }
 ```
 
@@ -2584,10 +2988,10 @@ Provides documentation strings for IDE hover tooltips and automatic documentatio
 @description 'User configuration structure'
 struct User {
     @description 'The user name (required)'
-    name: string
+    var name: string
 
     @description 'The user age in years'
-    age: u8
+    var age: u8
 
     @description 'Optional email address for notifications'
     email?: string
@@ -2607,13 +3011,13 @@ Specifies the name to use when serializing to JSON or other formats. This allows
 ```stria
 struct Config {
     @name 'database_url'
-    databaseUrl: string
+    var databaseUrl: string
 
     @name 'api_key'
-    apiKey: string
+    var apiKey: string
 
     @name 'max_connections'
-    maxConnections: u32
+    var maxConnections: u32
 }
 ```
 
@@ -2630,14 +3034,14 @@ Marks structs or properties as deprecated, providing migration guidance for IDE 
 ```stria
 struct LegacyConfig {
     @deprecated 'Use newField instead'
-    oldField: string
+    var oldField: string
 
-    newField: string
+    var newField: string
 }
 
 @deprecated 'Use ModernConfig instead'
 struct OldConfig {
-    value: string
+    val value: string
 }
 ```
 
@@ -2657,9 +3061,9 @@ When applied to a getter, the getter's return value at program completion become
 
 ```stria
 struct Version {
-    major: u16
-    minor: u16
-    patch: u16
+    val major: u16
+    val minor: u16
+    val patch: u16
 
     @serialize
     get toString(): string {
@@ -2677,13 +3081,13 @@ schema {
 }
 
 struct AppConfig {
-    version: Version
+    val version: Version
 }
 
 struct Version {
-    major: u16
-    minor: u16
-    patch: u16
+    val major: u16
+    val minor: u16
+    val patch: u16
 
     @serialize
     get toString(): string {
@@ -2719,9 +3123,9 @@ When applied to a struct, specify which getter to use for serialization:
 ```stria
 @serialize 'toString'
 struct Version {
-    major: u16
-    minor: u16
-    patch: u16
+    val major: u16
+    val minor: u16
+    val patch: u16
 
     get toString(): string {
         `${major}.${minor}.${patch}`
@@ -2741,16 +3145,16 @@ Flattens nested structures during JSON serialization, bringing child properties 
 
 ```stria
 struct DatabaseConfig {
-    host: string
-    port: u16
-    username: string
+    var host: string
+    var port: u16
+    var username: string
 }
 
 struct AppConfig {
     @flatten
-    database: DatabaseConfig
+    var database: DatabaseConfig
 
-    appName: string
+    var appName: string
 }
 ```
 
@@ -2799,19 +3203,19 @@ There are three equivalent ways to define a schema struct:
 ```stria
 // schema.stria
 schema struct AppConfig {
-    database: DatabaseConfig
-    server: ServerConfig
+    var database: DatabaseConfig
+    var server: ServerConfig
 }
 
 struct DatabaseConfig {
-    host: string
-    port: u16
+    var host: string
+    var port: u16
 }
 
 struct ServerConfig {
-    host: string
-    port: u16
-    ssl: bool
+    var host: string
+    var port: u16
+    var ssl: bool
 }
 ```
 
@@ -2820,19 +3224,19 @@ struct ServerConfig {
 ```stria
 // schema.stria
 schema struct {
-    database: DatabaseConfig
-    server: ServerConfig
+    var database: DatabaseConfig
+    var server: ServerConfig
 }
 
 struct DatabaseConfig {
-    host: string
-    port: u16
+    var host: string
+    var port: u16
 }
 
 struct ServerConfig {
-    host: string
-    port: u16
-    ssl: bool
+    var host: string
+    var port: u16
+    var ssl: bool
 }
 ```
 
@@ -2841,19 +3245,19 @@ struct ServerConfig {
 ```stria
 // schema.stria
 schema {
-    database: DatabaseConfig
-    server: ServerConfig
+    var database: DatabaseConfig
+    var server: ServerConfig
 }
 
 struct DatabaseConfig {
-    host: string
-    port: u16
+    var host: string
+    var port: u16
 }
 
 struct ServerConfig {
-    host: string
-    port: u16
-    ssl: bool
+    var host: string
+    var port: u16
+    var ssl: bool
 }
 ```
 
@@ -3624,7 +4028,7 @@ struct Config {
         }
     }
 
-    port: u16
+    var port: u16
 }
 ```
 
@@ -3642,18 +4046,18 @@ All AST nodes share a common base structure:
 
 ```typescript
 interface BaseNode {
-  type: string;
-  loc: Location;
+  var type: string;
+  var loc: Location;
 }
 
 interface Location {
-  start: Position;
-  end: Position;
+  var start: Position;
+  var end: Position;
 }
 
 interface Position {
-  line: u32; // 1-based line number
-  column: u32; // 0-based column number (LSP compatible)
+  var line: u32; // 1-based line number
+  var column: u32; // 0-based column number (LSP compatible)
 }
 ```
 
@@ -3676,7 +4080,7 @@ This ensures seamless integration with VSCode and other LSP-compatible editors w
 ```typescript
 interface Program extends BaseNode {
   type: "Program";
-  body: Statement[];
+  var body: Statement[];
 }
 ```
 
@@ -3685,52 +4089,52 @@ interface Program extends BaseNode {
 ```typescript
 interface SchemaDirective extends BaseNode {
   type: "SchemaDirective";
-  path: string;
+  var path: string;
 }
 
 interface UseStatement extends BaseNode {
   type: "UseStatement";
-  identifier: Identifier;
+  var identifier: Identifier;
 }
 
 interface VariableDeclaration extends BaseNode {
   type: "VariableDeclaration";
   kind: "val" | "var";
-  name: Identifier;
-  typeRef: TypeExpression | null;
-  value: Expression;
-  annotations: Annotation[];
+  var name: Identifier;
+  var typeRef: TypeExpression | null;
+  val value: Expression;
+  var annotations: Annotation[];
 }
 
 interface FunctionDeclaration extends BaseNode {
   type: "FunctionDeclaration";
-  isInfix: boolean;
-  receiverType: TypeExpression | null;
-  name: Identifier;
-  annotations: Annotation[];
-  parameters: Parameter[];
-  returnType: TypeExpression | null;
-  body: Statement[];
+  var isInfix: boolean;
+  var receiverType: TypeExpression | null;
+  var name: Identifier;
+  var annotations: Annotation[];
+  var parameters: Parameter[];
+  var returnType: TypeExpression | null;
+  var body: Statement[];
 }
 
 interface StructDeclaration extends BaseNode {
   type: "StructDeclaration";
-  name: Identifier;
-  annotations: Annotation[];
-  body: StructMember[];
+  var name: Identifier;
+  var annotations: Annotation[];
+  var body: StructMember[];
 }
 
 interface UnionDeclaration extends BaseNode {
   type: "UnionDeclaration";
-  name: Identifier;
-  annotations: Annotation[];
-  types: TypeExpression[];
+  var name: Identifier;
+  var annotations: Annotation[];
+  var types: TypeExpression[];
 }
 
 interface SchemaDeclaration extends BaseNode {
   type: "SchemaDeclaration";
-  annotations: Annotation[];
-  body: PropertyDeclaration[];
+  var annotations: Annotation[];
+  var body: PropertyDeclaration[];
   // Note: Represents schema struct definitions using any of the three equivalent forms:
   // 1. schema struct Name { ... }
   // 2. schema struct { ... }
@@ -3739,44 +4143,44 @@ interface SchemaDeclaration extends BaseNode {
 
 interface InitDeclaration extends BaseNode {
   type: "InitDeclaration";
-  annotations: Annotation[];
-  parameters: Parameter[];
-  body: Statement[];
+  var annotations: Annotation[];
+  var parameters: Parameter[];
+  var body: Statement[];
 }
 
 interface MethodDeclaration extends BaseNode {
   type: "MethodDeclaration";
-  name: Identifier;
-  annotations: Annotation[];
-  isPrivate: boolean;
-  parameters: Parameter[];
-  returnType: TypeExpression | null;
-  body: Statement[];
+  var name: Identifier;
+  var annotations: Annotation[];
+  var isPrivate: boolean;
+  var parameters: Parameter[];
+  var returnType: TypeExpression | null;
+  var body: Statement[];
 }
 
 interface GetterDeclaration extends BaseNode {
   type: "GetterDeclaration";
-  name: Identifier;
-  annotations: Annotation[];
-  returnType: TypeExpression | null;
-  body: Statement[];
+  var name: Identifier;
+  var annotations: Annotation[];
+  var returnType: TypeExpression | null;
+  var body: Statement[];
 }
 
 interface PropertyDeclaration extends BaseNode {
   type: "PropertyDeclaration";
-  name: Identifier;
-  annotations: Annotation[];
-  isPrivate: boolean;
-  isOptional: boolean;
-  typeRef: TypeExpression;
+  var name: Identifier;
+  var annotations: Annotation[];
+  var isPrivate: boolean;
+  var isOptional: boolean;
+  var typeRef: TypeExpression;
   defaultValue?: Expression;
 }
 
 interface RepeatedDeclaration extends BaseNode {
   type: "RepeatedDeclaration";
-  name: Identifier;
-  annotations: Annotation[];
-  typeRef: TypeExpression;
+  var name: Identifier;
+  var annotations: Annotation[];
+  var typeRef: TypeExpression;
   mapping?: MappingBlock;
 }
 ```
@@ -3786,42 +4190,42 @@ interface RepeatedDeclaration extends BaseNode {
 ```typescript
 interface CallExpression extends BaseNode {
   type: "CallExpression";
-  callee: Expression;
-  arguments: Expression[];
+  var callee: Expression;
+  var arguments: Expression[];
 }
 
 interface BinaryExpression extends BaseNode {
   type: "BinaryExpression";
-  operator: string;
-  left: Expression;
-  right: Expression;
+  var operator: string;
+  var left: Expression;
+  var right: Expression;
 }
 
 interface LambdaExpression extends BaseNode {
   type: "LambdaExpression";
-  parameters: Parameter[];
-  body: Statement[];
+  var parameters: Parameter[];
+  var body: Statement[];
 }
 
 interface IfExpression extends BaseNode {
   type: "IfExpression";
-  condition: Expression;
-  then: Statement[];
+  var condition: Expression;
+  var then: Statement[];
   else?: Statement[];
 }
 
 interface InfixCall extends BaseNode {
   type: "InfixCall";
-  functionName: string;
-  left: Expression;
-  right: Expression;
+  var functionName: string;
+  var left: Expression;
+  var right: Expression;
 }
 
 interface RangeExpression extends BaseNode {
   type: "RangeExpression";
-  from: Expression;
-  to: Expression;
-  inclusive: boolean;
+  val from: Expression;
+  val to: Expression;
+  var inclusive: boolean;
 }
 
 interface TemplateLiteral extends BaseNode {
@@ -3831,19 +4235,19 @@ interface TemplateLiteral extends BaseNode {
 
 interface TemplateStringPart extends BaseNode {
   type: "TemplateStringPart";
-  value: string;
+  val value: string;
 }
 
 interface TemplateInterpolation extends BaseNode {
   type: "TemplateInterpolation";
-  expression: Expression;
+  var expression: Expression;
 }
 
 interface MemberAccessExpression extends BaseNode {
   type: "MemberAccessExpression";
-  object: Expression;
-  property: Identifier;
-  computed: boolean;
+  var object: Expression;
+  var property: Identifier;
+  var computed: boolean;
 }
 
 interface ThisExpression extends BaseNode {
@@ -3852,12 +4256,12 @@ interface ThisExpression extends BaseNode {
 
 interface NonNullAssertionExpression extends BaseNode {
   type: "NonNullAssertionExpression";
-  operand: Expression;
+  var operand: Expression;
 }
 
 interface Identifier extends BaseNode {
   type: "Identifier";
-  name: string;
+  var name: string;
 }
 ```
 
@@ -3866,36 +4270,36 @@ interface Identifier extends BaseNode {
 ```typescript
 interface StringLiteral extends BaseNode {
   type: "StringLiteral";
-  value: string;
-  raw: string;
+  val value: string;
+  var raw: string;
 }
 
 interface IntegerLiteral extends BaseNode {
   type: "IntegerLiteral";
-  value: i64;
-  raw: string;
+  val value: i64;
+  var raw: string;
 }
 
 interface FloatLiteral extends BaseNode {
   type: "FloatLiteral";
-  value: f64;
-  raw: string;
+  val value: f64;
+  var raw: string;
 }
 
 interface BooleanLiteral extends BaseNode {
   type: "BooleanLiteral";
-  value: boolean;
-  raw: string;
+  val value: boolean;
+  var raw: string;
 }
 
 interface NullLiteral extends BaseNode {
   type: "NullLiteral";
-  raw: string;
+  var raw: string;
 }
 
 interface ListLiteral extends BaseNode {
   type: "ListLiteral";
-  elements: Expression[];
+  var elements: Expression[];
 }
 ```
 
@@ -3905,13 +4309,13 @@ interface ListLiteral extends BaseNode {
 interface AssignmentStatement extends BaseNode {
   type: "AssignmentStatement";
   operator: "=" | "+=" | "-=" | "*=" | "/=" | "%=";
-  left: Expression;
-  right: Expression;
+  var left: Expression;
+  var right: Expression;
 }
 
 interface ExpressionStatement extends BaseNode {
   type: "ExpressionStatement";
-  expression: Expression;
+  var expression: Expression;
 }
 
 interface ReturnStatement extends BaseNode {
@@ -3935,34 +4339,34 @@ interface ContinueStatement extends BaseNode {
 ```typescript
 interface TypeReference extends BaseNode {
   type: "TypeReference";
-  name: Identifier;
+  var name: Identifier;
 }
 
 interface PrimitiveType extends BaseNode {
   type: "PrimitiveType";
-  name: string;
+  var name: string;
 }
 
 interface ArrayType extends BaseNode {
   type: "ArrayType";
-  elementType: TypeExpression;
-  dimensions: u32;
+  var elementType: TypeExpression;
+  var dimensions: u32;
 }
 
 interface OptionalType extends BaseNode {
   type: "OptionalType";
-  baseType: TypeExpression;
+  var baseType: TypeExpression;
 }
 
 interface UnionType extends BaseNode {
   type: "UnionType";
-  types: TypeExpression[];
+  var types: TypeExpression[];
 }
 
 interface FunctionType extends BaseNode {
   type: "FunctionType";
-  parameters: TypeExpression[];
-  returnType: TypeExpression;
+  var parameters: TypeExpression[];
+  var returnType: TypeExpression;
 }
 ```
 
@@ -3971,13 +4375,13 @@ interface FunctionType extends BaseNode {
 ```typescript
 interface Annotation extends BaseNode {
   type: "Annotation";
-  name: Identifier;
-  arguments: Expression[];
+  var name: Identifier;
+  var arguments: Expression[];
 }
 
 interface Parameter extends BaseNode {
   type: "Parameter";
-  name: Identifier | MemberAccessExpression;
+  var name: Identifier | MemberAccessExpression;
   typeRef?: TypeExpression;
 }
 ```
@@ -3987,13 +4391,13 @@ interface Parameter extends BaseNode {
 ```typescript
 interface MappingBlock extends BaseNode {
   type: "MappingBlock";
-  entries: MappingEntry[];
+  var entries: MappingEntry[];
 }
 
 interface MappingEntry extends BaseNode {
   type: "MappingEntry";
-  from: Identifier;
-  to: Identifier;
+  val from: Identifier;
+  val to: Identifier;
 }
 ```
 
@@ -4070,7 +4474,7 @@ Generates:
                 type: 'Identifier',
                 name: 'message'
             },
-            typeRef: null,
+            var typeRef: null,
             value: {
                 type: 'StringLiteral',
                 value: 'Hello, World!',
@@ -4095,8 +4499,8 @@ Generates:
 ```typescript
 {
     type: 'FunctionDeclaration',
-    isInfix: false,
-    receiverType: null,
+    var isInfix: false,
+    var receiverType: null,
     name: {
         type: 'Identifier',
         name: 'buildConnectionString'
@@ -4165,8 +4569,8 @@ Generates:
 
 ```stria
 struct Point {
-    x: i32
-    y: i32
+    val x: i32
+    val y: i32
 }
 ```
 
@@ -4188,8 +4592,8 @@ Generates:
                 name: 'x'
             },
             annotations: [],
-            isPrivate: false,
-            isOptional: false,
+            var isPrivate: false,
+            var isOptional: false,
             typeRef: {
                 type: 'PrimitiveType',
                 name: 'i32'
@@ -4202,8 +4606,8 @@ Generates:
                 name: 'y'
             },
             annotations: [],
-            isPrivate: false,
-            isOptional: false,
+            var isPrivate: false,
+            var isOptional: false,
             typeRef: {
                 type: 'PrimitiveType',
                 name: 'i32'
